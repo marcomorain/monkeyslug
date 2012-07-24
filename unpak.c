@@ -37,6 +37,7 @@ Quake2 specifics on PAK files (content wise)  I have no clue.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 struct pak_directory
 {
@@ -53,6 +54,32 @@ struct pak_header
     struct pak_directory directories[1];
 };
 
+// Count the number of folders in directory
+// "readme.txt" => 0
+// "foo/readme.txt" => 1
+// "one/two/three/four.txt => 3
+static int count_directories(char* directory)
+{
+    char* counter = strdup(directory);
+    int count = 0;
+    for (char* dir = strtok(counter, "/"); dir; dir = strtok(NULL, "/"))
+        count++;
+    free(counter);
+    return count - 1;
+}
+
+static char* read_entire_file(char* filename)
+{
+    FILE* input = fopen(filename, "rb");
+    fseek(input, 0, SEEK_END);
+    long size = ftell(input);
+    char* data = malloc(size);
+    rewind(input);
+    fread(data, size, 1, input);
+    fclose(input);
+    return data;
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 2)
@@ -60,14 +87,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "Usage: %s <filename.pak>\n", argv[0]);
         return EXIT_FAILURE;
     }
-    
-    FILE* input = fopen(argv[1], "rb");
-    fseek(input, 0, SEEK_END);
-    long size = ftell(input);
-    char* data = malloc(size);
-    rewind(input);
-    fread(data, size, 1, input);
-    fclose(input);
+    char* data = read_entire_file(argv[1]);
     
     struct pak_header* header = (struct pak_header*)data;
 
@@ -80,7 +100,6 @@ int main(int argc, char** argv)
         header->directory_offset);
         
     char* cwd = getcwd(0, 0);
-    puts(cwd);
     
     // Default return status
     int status = EXIT_SUCCESS;
@@ -93,14 +112,21 @@ int main(int argc, char** argv)
             directory->file_length,
             directory->file_name);
 
-        char* folders = strdup(directory->file_name);
+        int dir_count = count_directories(directory->file_name);
         
+        char* folders = strdup(directory->file_name);
+
+        int c = 0;
         for (char* dir = strtok(folders, "/"); dir; dir = strtok(NULL, "/"))
         {
-            puts(dir);
-            mkdir(dir);
-            chmod(dir, 0755);
-            if (chdir(dir))
+            c = c + 1;
+            
+            if (c <= dir_count)
+            {
+                mkdir(dir, 0755);
+                chdir(dir);
+            }
+            else
             {
                 FILE* output = fopen(dir, "wb");                
                 if (!output)
@@ -110,17 +136,13 @@ int main(int argc, char** argv)
                     goto cleanup;
                 }
                 fwrite(&data[directory->file_position], directory->file_length, 1, output);
-                fclose(output);
-                
+                fclose(output);   
             }
         }
-        free(folders);   
-        
-
-        
+        free(folders);        
         chdir(cwd);
         
-        i = directory->file_position + directory->file_length;
+        i += sizeof(struct pak_directory); // = i + directory->file_length + sizeof(struct pak_directory);
         
 
     }
