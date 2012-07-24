@@ -95,14 +95,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
     
-    printf("header: %c%c%c%c length: %d offset: %d\n",
-        header->signature[0],
-        header->signature[1],
-        header->signature[2],
-        header->signature[3],
-        header->directory_length,
-        header->directory_offset);
-        
+    // Store the current working directory for jumping back to later        
     char* cwd = getcwd(0, 0);
     
     // Default return status
@@ -144,7 +137,8 @@ int main(int argc, char** argv)
                     goto cleanup;
                 }
                 fwrite(&data[directory->file_position], directory->file_length, 1, output);
-                fclose(output);   
+                fclose(output);
+                break;
             }
         }
         free(folders);
