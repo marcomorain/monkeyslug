@@ -51,7 +51,6 @@ struct pak_header
     char signature[4];
     uint32_t directory_offset;
     uint32_t directory_length;
-    struct pak_directory directories[1];
 };
 
 // Count the number of folders in directory
@@ -90,8 +89,13 @@ int main(int argc, char** argv)
     char* data = read_entire_file(argv[1]);
     
     struct pak_header* header = (struct pak_header*)data;
-
-    printf("header: %c%c%c%c offset: %d length: %d\n",
+    
+    if (memcmp(header->signature, "PACK", 4)) {
+        fprintf(stderr, "Invalid pak: %s\n", argv[1]);
+        return EXIT_FAILURE;
+    }
+    
+    printf("header: %c%c%c%c length: %d offset: %d\n",
         header->signature[0],
         header->signature[1],
         header->signature[2],
@@ -104,17 +108,21 @@ int main(int argc, char** argv)
     // Default return status
     int status = EXIT_SUCCESS;
         
-    for (uint32_t i = header->directory_offset; 1;)
-    {
-        struct pak_directory* directory = (struct pak_directory*)&data[i];
-        printf("Directory: pos: %d len: %d name: %s\n",
-            directory->file_position,
-            directory->file_length,
-            directory->file_name);
+    struct pak_directory* directories = (struct pak_directory*) &data[header->directory_offset];
+    uint32_t num_directories = header->directory_length / sizeof(struct pak_directory);
+
+    for (uint32_t i = 0; i < num_directories; i++)
+    {        
+        struct pak_directory* directory = &directories[i];
+        
+        printf("%s (%d bytes)\n", directory->file_name, directory->file_length);
 
         int dir_count = count_directories(directory->file_name);
         
         char* folders = strdup(directory->file_name);
+        
+        mkdir("output", 0755);
+        chdir("output");
 
         int c = 0;
         for (char* dir = strtok(folders, "/"); dir; dir = strtok(NULL, "/"))
@@ -139,12 +147,8 @@ int main(int argc, char** argv)
                 fclose(output);   
             }
         }
-        free(folders);        
+        free(folders);
         chdir(cwd);
-        
-        i += sizeof(struct pak_directory); // = i + directory->file_length + sizeof(struct pak_directory);
-        
-
     }
     
 cleanup:
