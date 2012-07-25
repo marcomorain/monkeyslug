@@ -35,6 +35,7 @@ Quake2 specifics on PAK files (content wise)  I have no clue.
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -53,23 +54,21 @@ struct pak_header
     uint32_t directory_length;
 };
 
-// Count the number of folders in directory
-// "readme.txt" => 0
-// "foo/readme.txt" => 1
-// "one/two/three/four.txt => 3
-static int count_directories(char* directory)
+static void fatal(const char* message, ...)
 {
-    char* counter = strdup(directory);
-    int count = 0;
-    for (char* dir = strtok(counter, "/"); dir; dir = strtok(NULL, "/"))
-        count++;
-    free(counter);
-    return count - 1;
+    va_list argp;
+    va_start(argp, message);
+    fprintf(stderr, "Fatal error: ");
+    vfprintf(stderr, message, argp);
+    fputs("\n", stderr);
+    va_end(argp);
+    exit(EXIT_FAILURE);
 }
 
-static char* read_entire_file(char* filename)
+static char* read_entire_file(const char* filename)
 {
     FILE* input = fopen(filename, "rb");
+    if (!input) fatal("Error reading %s\n", filename);
     fseek(input, 0, SEEK_END);
     long size = ftell(input);
     char* data = malloc(size);
@@ -79,76 +78,70 @@ static char* read_entire_file(char* filename)
     return data;
 }
 
-int main(int argc, char** argv)
+// Given the path to a file
+// Open the containing folder, and return a pointer
+// the start of the file name
+// 'foo/bar/baz.bsp' =>
+//   chdir('foo/bar'); return 'baz.bsp'
+static char* create_dir_and_open(char* path)
 {
-    if (argc < 2)
-    {
-        fprintf(stderr, "Usage: %s <filename.pak>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-    char* data = read_entire_file(argv[1]);
+    char* last_sep = strrchr(path, '/');
+    if (!last_sep) return path;
+
+    // Add a null between folder and file 
+    // "foo/bar/baz.bsp" => "foo/bar" {0} "baz.bsp"
+    *last_sep = 0;
+    mkdir(path, 0755);
+    chdir(path);
+    return last_sep + 1;    
+}
+
+static void unpack(const char* destination, const char* filename)
+{
+    chdir(destination);
+    
+    char* data = read_entire_file(filename);
     
     struct pak_header* header = (struct pak_header*)data;
     
-    if (memcmp(header->signature, "PACK", 4)) {
-        fprintf(stderr, "Invalid pak: %s\n", argv[1]);
-        return EXIT_FAILURE;
+    if (memcmp(header->signature, "PACK", 4))
+    {
+        fatal("Invalid pak: %s\n", filename);
     }
-    
-    // Store the current working directory for jumping back to later        
-    char* cwd = getcwd(0, 0);
-    
-    // Default return status
-    int status = EXIT_SUCCESS;
         
     struct pak_directory* directories = (struct pak_directory*) &data[header->directory_offset];
     uint32_t num_directories = header->directory_length / sizeof(struct pak_directory);
-
+    
     for (uint32_t i = 0; i < num_directories; i++)
     {        
         struct pak_directory* directory = &directories[i];
-        
-        printf("%s (%d bytes)\n", directory->file_name, directory->file_length);
+        printf("%s (%d bytes)\n", directory->file_name, directory->file_length);        
 
-        int dir_count = count_directories(directory->file_name);
-        
-        char* folders = strdup(directory->file_name);
-        
-        mkdir("output", 0755);
-        chdir("output");
+        const char* file_name = create_dir_and_open(directory->file_name);
 
-        int c = 0;
-        for (char* dir = strtok(folders, "/"); dir; dir = strtok(NULL, "/"))
-        {
-            c = c + 1;
-            
-            if (c <= dir_count)
-            {
-                mkdir(dir, 0755);
-                chdir(dir);
-            }
-            else
-            {
-                FILE* output = fopen(dir, "wb");                
-                if (!output)
-                {
-                    fprintf(stderr, "Error opening %s for writing.\n", dir);
-                    status = EXIT_FAILURE;
-                    goto cleanup;
-                }
-                fwrite(&data[directory->file_position], directory->file_length, 1, output);
-                fclose(output);
-                break;
-            }
-        }
-        free(folders);
-        chdir(cwd);
+        FILE* output = fopen(file_name, "wb");
+        if (!output) fatal("Error opening [%s] %s for writing.\n", getcwd(0,0), file_name); // leakcwd
+        
+        fwrite(&data[directory->file_position], directory->file_length, 1, output);
+        fclose(output);
     }
     
-cleanup:
-    free(cwd);
     free(data);
-    return status;
+}
+
+int main(int argc, char** argv)
+{
+    if (argc < 2) fatal("Usage: %s <filename.pak>\n", argv[0]);
+    
+    mkdir("output", 0755);
+    chdir("output");
+    
+    // Store the current working directory for jumping back to later        
+    char* cwd = getcwd(0, 0); // leaks
+
+    for (int i=1; i<argc; i++) unpack(cwd, argv[i]);
+    
+    return EXIT_SUCCESS;
 }
 
 
