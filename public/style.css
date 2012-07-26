@@ -3,6 +3,10 @@ canvas {
   border-width: 2px;
   border-color: #000; }
 
+canvas:-webkit-full-screen {
+  width: 1024px;
+  height: 786px; }
+
 .content-navigation {
   border-color: #3bbfce;
   color: #2ca2af; }

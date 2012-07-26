@@ -9,6 +9,11 @@ canvas {
   }
 }
 
+canvas:-webkit-full-screen {
+  width:  1024px;
+  height: 786px;
+}
+
 .content-navigation {
   border-color: $blue;
   color:
