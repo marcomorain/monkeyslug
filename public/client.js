@@ -1,41 +1,25 @@
 $(function() {
   "use strict";
-
-  var triangleVertexPositionBuffer;
-  var squareVertexPositionBuffer;
   
-  
-  
-  function initBuffers(gl) {
-    triangleVertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+  var Buffer = function(gl) {
+    var self = this;
+    self.vertex_buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, self.vertex_buffer);
+    
     var vertices = [
          0.0,  1.0,  0.0,
         -1.0, -1.0,  0.0,
          1.0, -1.0,  0.0
     ];
+    
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    triangleVertexPositionBuffer.itemSize = 3;
-    triangleVertexPositionBuffer.numItems = 3;
-
-    squareVertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-    vertices = [
-         1.0,  1.0,  0.0,
-        -1.0,  1.0,  0.0,
-         1.0, -1.0,  0.0,
-        -1.0, -1.0,  0.0
-    ];
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    squareVertexPositionBuffer.itemSize = 3;
-    squareVertexPositionBuffer.numItems = 4;
+    
+    self.vertex_buffer.itemSize = 3;
+    self.vertex_buffer.numItems = 3;
   }
       
   function getShader(gl, id) {
       var shaderScript = document.getElementById(id);
-      if (!shaderScript) {
-          return null;
-      }
 
       var str = "";
       var k = shaderScript.firstChild;
@@ -46,14 +30,12 @@ $(function() {
           k = k.nextSibling;
       }
 
-      var shader;
-      if (shaderScript.type == "x-shader/x-fragment") {
-          shader = gl.createShader(gl.FRAGMENT_SHADER);
-      } else if (shaderScript.type == "x-shader/x-vertex") {
-          shader = gl.createShader(gl.VERTEX_SHADER);
-      } else {
-          return null;
+      var shader_types = {
+        'x-shader/x-fragment' : gl.FRAGMENT_SHADER,
+        'x-shader/x-vertex'   : gl.VERTEX_SHADER
       }
+
+      var shader = gl.createShader(shader_types[shaderScript.type]);
 
       gl.shaderSource(shader, str);
       gl.compileShader(shader);
@@ -108,7 +90,7 @@ $(function() {
   var webgl = init_webgl(game);
   
   var shaderProgram = initShaders(webgl);
-  initBuffers(webgl);
+  var triangle = new Buffer(webgl);
 
   var mvMatrix = mat4.create();
   var pMatrix = mat4.create();
@@ -135,36 +117,15 @@ $(function() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
-
     mat4.identity(mvMatrix);
-
     mat4.translate(mvMatrix, [-1.5, 0.0, -7.0]);
-    gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    
+    gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
+    
+    
+    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triangle.vertex_buffer.itemSize, gl.FLOAT, false, 0, 0);
     setMatrixUniforms(gl);
-    gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
-
-
-    mat4.translate(mvMatrix, [3.0, 0.0, 0.0]);
-    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, squareVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-    setMatrixUniforms(gl);
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, squareVertexPositionBuffer.numItems);
-    
-    /*
-    
-    context.fillStyle = "rgb(200,0,0)";
-    context.fillRect (10, 10, 55, 50);
-    context.fillStyle = "rgba(0, 0, 200, 0.5)";
-    context.fillRect (30, 30, 55, 50);
-    
-    context.strokeStyle = "rgb(0,0,0,1)";
-    context.beginPath();
-    context.moveTo(w/2, h/2);
-    context.lineTo((w/2) + mouse_x, (h/2) + mouse_y);
-    context.stroke();
-    
-    */
+    gl.drawArrays(gl.LINE_LOOP, 0,  triangle.vertex_buffer.numItems);
   }
 
   var update = function(dt) {
@@ -176,8 +137,7 @@ $(function() {
   
   $game.bind('webkitfullscreenchange', function(e) {
     if (document.webkitFullscreenElement){
-//      $game.attr('width', document.width);
-//      $game.attr('height', document.height);
+      // entered fullscreen
     }
     console.log('fullscreen change');
   });
