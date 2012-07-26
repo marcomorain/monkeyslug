@@ -49,34 +49,34 @@ $(function() {
   }
   
   function initShaders(gl) {
-      var fragmentShader = getShader(gl, "shader-fs");
-      var vertexShader   = getShader(gl, "shader-vs");
+      var fragmentShader = getShader(gl, 'shader-fs');
+      var vertexShader   = getShader(gl, 'shader-vs');
 
-      var shaderProgram = gl.createProgram();
-      gl.attachShader(shaderProgram, vertexShader);
-      gl.attachShader(shaderProgram, fragmentShader);
-      gl.linkProgram(shaderProgram);
+      var program = gl.createProgram();
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      gl.linkProgram(program);
 
-      if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
           alert("Could not initialise shaders");
       }
 
-      gl.useProgram(shaderProgram);
+      gl.useProgram(program);
 
-      shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-      gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+      program.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
+      gl.enableVertexAttribArray(program.vertexPositionAttribute);
 
-      shaderProgram.pMatrixUniform  = gl.getUniformLocation(shaderProgram, "uPMatrix");
-      shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+      program.pMatrixUniform  = gl.getUniformLocation(program, 'uPMatrix');
+      program.mvMatrixUniform = gl.getUniformLocation(program, 'uMVMatrix');
       
-      return shaderProgram;
+      return program;
   }
   
   var init_webgl = function(canvas) {
     var webgl = canvas.getContext("experimental-webgl");
     console.log(webgl);
     if (!webgl) alert('Could not initialise WebGL');
-    webgl.viewportWidth = canvas.width;
+    webgl.viewportWidth  = canvas.width;
     webgl.viewportHeight = canvas.height;
     webgl.clearColor(0.0, 0.0, 0.0, 1.0);
     webgl.enable(webgl.DEPTH_TEST);
