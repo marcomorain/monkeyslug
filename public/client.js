@@ -15,29 +15,20 @@ $(function() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     
     self.vertex_buffer.itemSize = 3;
-    self.vertex_buffer.numItems = 3;
+    self.vertex_buffer.numItems = vertices.length / 3;
   }
       
   function getShader(gl, id) {
-      var shaderScript = document.getElementById(id);
-
-      var str = "";
-      var k = shaderScript.firstChild;
-      while (k) {
-          if (k.nodeType == 3) {
-              str += k.textContent;
-          }
-          k = k.nextSibling;
-      }
+      var script = $(id).text();
 
       var shader_types = {
         'x-shader/x-fragment' : gl.FRAGMENT_SHADER,
         'x-shader/x-vertex'   : gl.VERTEX_SHADER
       }
 
-      var shader = gl.createShader(shader_types[shaderScript.type]);
+      var shader = gl.createShader(shader_types[$(id).attr('type')]);
 
-      gl.shaderSource(shader, str);
+      gl.shaderSource(shader, script);
       gl.compileShader(shader);
 
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
@@ -49,8 +40,8 @@ $(function() {
   }
   
   function initShaders(gl) {
-      var fragmentShader = getShader(gl, 'shader-fs');
-      var vertexShader   = getShader(gl, 'shader-vs');
+      var fragmentShader = getShader(gl, '#shader-fs');
+      var vertexShader   = getShader(gl, '#shader-vs');
 
       var program = gl.createProgram();
       gl.attachShader(program, vertexShader);
@@ -74,7 +65,6 @@ $(function() {
   
   var init_webgl = function(canvas) {
     var webgl = canvas.getContext("experimental-webgl");
-    console.log(webgl);
     if (!webgl) alert('Could not initialise WebGL');
     webgl.viewportWidth  = canvas.width;
     webgl.viewportHeight = canvas.height;
@@ -96,7 +86,7 @@ $(function() {
   var pMatrix = mat4.create();
 
   function setMatrixUniforms(gl) {
-      gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+      gl.uniformMatrix4fv(shaderProgram.pMatrixUniform,  false, pMatrix);
       gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
   }
   
@@ -104,6 +94,8 @@ $(function() {
   var mouse_y = 0;
   
   
+  var x = -1.5;
+  var z = -7;
   
   var render = function(canvas, context, gl) {
 
@@ -118,7 +110,10 @@ $(function() {
 
     mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
     mat4.identity(mvMatrix);
-    mat4.translate(mvMatrix, [-1.5, 0.0, -7.0]);
+    mat4.translate(mvMatrix, [x, 0.0, z]);
+    
+    x += mouse_x * 0.05;
+    z += mouse_y * 0.05;
     
     gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
     
@@ -156,9 +151,7 @@ $(function() {
 
   $('#fullscreen').click(function(){
     game.webkitRequestFullScreen();
-    //game.webkitRequestPointerLock();
+    game.webkitRequestPointerLock();
 
   });
-
-  console.log('woot');
 });
