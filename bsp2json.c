@@ -51,14 +51,6 @@ typedef struct
     float z;                    // but coded in floating point
 } vertex_t;
 
-static void vertex_to_json(FILE* output, vertex_t* vertex)
-{
-    fprintf(output, "  { x: %g y: %g z: %g }",
-        vertex->x,
-        vertex->y,
-        vertex->z);
-}
-
 static void to_json(FILE* output, const char* file)
 {
     char* data = read_entire_file(file);
@@ -66,8 +58,8 @@ static void to_json(FILE* output, const char* file)
     dheader_t* header = (dheader_t*)data;
     printf("Reading %s BSP version %x\n", file, header->version);
     
-    const int num_vertices = (header->vertices.size / sizeof(vertex_t));
-    vertex_t* vertices = (vertex_t*)(data + header->vertices.offset);
+    const int num_vertices = header->vertices.size / sizeof(float);
+    float* vertices = (float*)(data + header->vertices.offset);
     
     printf("num vertices: %d\n", num_vertices);
     
@@ -75,9 +67,9 @@ static void to_json(FILE* output, const char* file)
 
     for (int i=0; i<num_vertices; i++)
     {
-        vertex_to_json(output, vertices + i);
+        fprintf(output, "%g", vertices[i]);
         if (i < (num_vertices - 1)) fprintf(output, ", ");
-        if ((i%3)==0) fprintf(output, "\n");
+        if ((i%8)==0) fprintf(output, "\n");
     }
     fprintf(output, "]\n}\n");  
     free(data);
