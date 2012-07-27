@@ -2859,10 +2859,34 @@ $(function() {
   var mouse_y = 0;
 
   
+  
   var yaw = 0;
   var roll = 0;
+  var pitch = 0;
+  
+  var player_x = 0;
+  var player_y = 0;
+  var player_z = 0;
   
   var mouse_sensitivity = 0.01;
+  var fov = 45;
+  var near_clip = 4;
+  var far_clip = 4096;
+  var speed = 4;
+  
+  var pitch_min = -Math.PI/6;
+  var pitch_max =  Math.PI/6;
+  
+  var up    = 87;
+  var down  = 83;
+  var left  = 65;
+  var right = 68;
+  var keys  = {};
+  
+  
+  var clamp = function(n, min, max) {
+    return Math.max(min, Math.min(n, max));
+  }
   
   var render = function(canvas, context, gl) {
 
@@ -2875,21 +2899,34 @@ $(function() {
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 1000.0, pMatrix);
+    mat4.perspective(fov, gl.viewportWidth / gl.viewportHeight, near_clip, far_clip, pMatrix);
     mat4.identity(mvMatrix);
 
-    //mat4.translate(mvMatrix, [x, 0.0, z]);
+    yaw   += mouse_sensitivity * mouse_x;
+    pitch += mouse_sensitivity * mouse_y;
     
-    yaw  += mouse_sensitivity * mouse_x;
-    roll += mouse_sensitivity * mouse_y;
+    pitch = clamp(pitch, pitch_min, pitch_max);
     
-    mat4.rotate(mvMatrix, roll, [1, 0, 0]);
-    mat4.rotate(mvMatrix, yaw,  [0, 1, 0]);
+    if (keys[up])    player_z += speed;
+    if (keys[down])  player_z -= speed;
+    if (keys[left])  player_x += speed;
+    if (keys[right]) player_x -= speed;
     
+
+    
+    // Quake
+    var nintey = Math.PI / 2;
+    mat4.rotate(mvMatrix, -nintey, [1, 0, 0]);	    // put Z going up
+    mat4.rotate(mvMatrix,  nintey, [0, 0, 1]);	    // put Z going up
+
+    mat4.rotate(mvMatrix, roll,    [1, 0, 0]);
+    mat4.rotate(mvMatrix, pitch,   [0, 1, 0]);
+    mat4.rotate(mvMatrix, yaw,     [0, 0, 1]);
+      
+    mat4.translate(mvMatrix, [player_x, player_y, player_z]);
 
     
     gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
-    
     
     gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triangle.vertex_buffer.itemSize, gl.FLOAT, false, 0, 0);
     setMatrixUniforms(gl);
@@ -2910,7 +2947,17 @@ $(function() {
     console.log('fullscreen change');
   });
   
-  $(game).mousemove(function(e) {
+  
+  $(document).keydown(function(e) {
+    keys[e.which] = true;
+  });
+  
+  $(document).keyup(function(e) {
+    keys[e.which] = false;
+  });
+  
+  
+  $game.mousemove(function(e) {
     var orig = e.originalEvent;
     
     var x = orig.webkitMovementX || 0;
