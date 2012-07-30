@@ -39,7 +39,8 @@ Quake2 specifics on PAK files (content wise)  I have no clue.
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
-
+#include <sys/errno.h>
+     
 #include "utils.c"
 
 struct pak_directory
@@ -56,6 +57,19 @@ struct pak_header
     uint32_t directory_length;
 };
 
+
+static void open_dir(char* path)
+{
+    printf("making and entering %s\n", path);
+
+    for(char* tok = strtok(path, "/"); tok; tok = strtok(NULL, "/"))
+    {
+        printf("tok: %s\n", tok);
+        mkdir(tok, 0755);
+        chdir(tok);
+    }
+}
+
 // Given the path to a file
 // Open the containing folder, and return a pointer
 // the start of the file name
@@ -69,15 +83,15 @@ static char* create_dir_and_open(char* path)
     // Add a null between folder and file 
     // "foo/bar/baz.bsp" => "foo/bar" {0} "baz.bsp"
     *last_sep = 0;
-    mkdir(path, 0755);
-    chdir(path);
-    return last_sep + 1;    
+    
+    
+    open_dir(path);
+    
+    return last_sep + 1;
 }
 
 static void unpack(const char* destination, const char* filename)
 {
-    chdir(destination);
-    
     char* data = read_entire_file(filename);
     
     struct pak_header* header = (struct pak_header*)data;
@@ -92,6 +106,8 @@ static void unpack(const char* destination, const char* filename)
     
     for (uint32_t i = 0; i < num_directories; i++)
     {        
+        chdir(destination);
+
         struct pak_directory* directory = &directories[i];
         printf("%s (%d bytes)\n", directory->file_name, directory->file_length);        
 
@@ -116,6 +132,7 @@ int main(int argc, char** argv)
     
     // Store the current working directory for jumping back to later        
     char* cwd = getcwd(0, 0); // leaks
+    puts(cwd);
 
     for (int i=1; i<argc; i++) unpack(cwd, argv[i]);
     

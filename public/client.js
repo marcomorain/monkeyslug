@@ -2905,10 +2905,8 @@ $(function() {
     
     pitch = clamp(pitch, pitch_min, pitch_max);
     
-    if (keys[up])    player_z += speed;
-    if (keys[down])  player_z -= speed;
-    if (keys[left])  player_x += speed;
-    if (keys[right]) player_x -= speed;
+
+   
     
     // Quake
     var nintey = Math.PI / 2;
@@ -2918,9 +2916,25 @@ $(function() {
     mat4.rotate(mvMatrix, roll,    [1, 0, 0]);
     mat4.rotate(mvMatrix, pitch,   [0, 1, 0]);
     mat4.rotate(mvMatrix, yaw,     [0, 0, 1]);
+
+    var vec_walk   = vec3.create([0, speed, 0]);
+    var vec_strafe = vec3.create([speed, 0, 0]);
+    
+    vec_walk   = mat4.multiplyVec3(mvMatrix, vec_walk);
+    vec_strafe = mat4.multiplyVec3(mvMatrix, vec_strafe);
+
+    if (keys[up])
+    {
+      player_x += vec_walk[0];
+      player_y += vec_walk[1];
+      player_z += vec_walk[2];
+      console.log(vec_walk);
+    }
+      if (keys[down])  player_z -= speed;
+      if (keys[left])  player_x += speed;
+      if (keys[right]) player_x -= speed;
       
     mat4.translate(mvMatrix, [player_x, player_y, player_z]);
-
     
     gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
     
@@ -2975,7 +2989,7 @@ $(function() {
   window.webkitRequestAnimationFrame(update, game);
 
   $('#fullscreen').click(function(){
-    game.webkitRequestFullScreen();
+    game.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
     game.webkitRequestPointerLock();
 
   });

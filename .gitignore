@@ -3,3 +3,4 @@ unpak
 bsp2json.o
 bsp2json
 public/.sass-cache/
+.DS_Store
