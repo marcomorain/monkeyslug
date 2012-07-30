@@ -2831,8 +2831,6 @@ $(function() {
   var init_webgl = function(canvas) {
     var webgl = canvas.getContext("experimental-webgl");
     if (!webgl) alert('Could not initialise WebGL');
-    webgl.viewportWidth  = canvas.width;
-    webgl.viewportHeight = canvas.height;
     webgl.clearColor(0.2, 0.2, 0.2, 1.0);
     webgl.enable(webgl.DEPTH_TEST);
     return webgl;
@@ -2896,10 +2894,10 @@ $(function() {
     // Clear
     canvas.width = w;
     
-    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+    gl.viewport(0, 0, w, h);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    mat4.perspective(fov, gl.viewportWidth / gl.viewportHeight, near_clip, far_clip, pMatrix);
+    mat4.perspective(fov, w / h, near_clip, far_clip, pMatrix);
     mat4.identity(mvMatrix);
 
     yaw   += mouse_sensitivity * mouse_x;
@@ -2911,8 +2909,6 @@ $(function() {
     if (keys[down])  player_z -= speed;
     if (keys[left])  player_x += speed;
     if (keys[right]) player_x -= speed;
-    
-
     
     // Quake
     var nintey = Math.PI / 2;
@@ -2940,9 +2936,16 @@ $(function() {
     window.webkitRequestAnimationFrame(update, game);
   };
   
+  var original_width  = game.width;
+  var original_height = game.height;
+
   $game.bind('webkitfullscreenchange', function(e) {
     if (document.webkitFullscreenElement){
-      // entered fullscreen
+      game.width = screen.width;
+      game.height = screen.height;
+    } else {
+      game.width = original_width;
+      game.height = original_height;
     }
     console.log('fullscreen change');
   });
@@ -2958,6 +2961,8 @@ $(function() {
   
   
   $game.mousemove(function(e) {
+    
+    if (!document.webkitFullscreenElement) return;
     var orig = e.originalEvent;
     
     var x = orig.webkitMovementX || 0;
