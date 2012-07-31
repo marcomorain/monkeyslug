@@ -104,34 +104,27 @@ static edge_t* get_edge(int index)
     return edges + index;
 }
 
-static void faces_to_json(FILE* output)
+static void faces_to_json(FILE* vertices_out, FILE* indices_out)
 {
     printf("Num faces: %d\n", num_faces);
 
-    fprintf(output, "\"verts_and_normals\" : [ ");
+    fprintf(vertices_out, "{ \"vertices\" : [ ");
+    fprintf(indices_out,  "{ \"indices\"  : [ ");
+
+    int index_base = 0;
 
     for (int i=0; i<num_faces; i++)
     {
         const face_t* face = faces + i;
-
-        if (face->ledge_num != 4) continue;
-                        /*
-            fprintf(output, "  {\n");
-            fprintf(output, "    plane_id:   %d,\n",       face->plane_id);
-            fprintf(output, "    side:       %d,\n",           face->side);
-//               printf("    ledge_id:   %d,\n",      face->ledge_id);
-//               printf("    ledge_num:  %d,\n",      face->ledge_num);
-            fprintf(output, "    texinfo_id: %d,\n",     face->texinfo_id);
-            fprintf(output, "    typelight:  %d,\n",      face->typelight);
-            fprintf(output, "    baselight:  %d,\n",      face->baselight);
-            fprintf(output, "    light: [%d, %d],\n",    face->light[0], face->light[1]);
-            fprintf(output, "    lightmap:   %d\n",       face->lightmap);
-*/
-
+        
+        printf("%d edges in face\n", face->ledge_num);
+  
         vertex_t* verts = (vertex_t*)vertices;    
         int32_t* first_edge = list_edges +  face->ledge_id;
         
         plane_t* plane = planes + face->plane_id;
+        
+        int last_face = (i == num_faces -1);
 
         for (int e=0; e<face->ledge_num; e++)
         {
@@ -143,51 +136,44 @@ static void faces_to_json(FILE* output)
                 v0 = edge->vertex0;
                 v1 = edge->vertex1;
             }
-            else
+            else // swap winding
             {
-                // swap winding
                 edge_t* edge = get_edge(-edge_index);
                 v0 = edge->vertex1;
                 v1 = edge->vertex0;
             }
+            
+            int last_vertex = (e == face->ledge_num - 1) && last_face;
 
-            fprintf(output, "%g, %g, %g, %g, %g, %g, \n",
+            fprintf(vertices_out, "%g, %g, %g, %g, %g, %g%c \n",
                 verts[v0].x,
                 verts[v0].y,
                 verts[v0].z,
                 plane->normal.x,
                 plane->normal.y,
-                plane->normal.z);
+                plane->normal.z,
+                last_vertex ? ' ' : ',');
+
         }
+        
+        
+        for (int f=1; f < face->ledge_num - 1; f++)
+        {
+            int last_index = (f == face->ledge_num - 2) && last_face;
+            fprintf(indices_out, "%d, %d, %d%c \n",
+                index_base,
+                index_base + f,
+                index_base + f + 1,
+                last_index ? ' ' : ',');
+        }
+        index_base += face->ledge_num;
     }
 
-    fprintf(output, "]\n");
-    
-    fprintf(output, "\"indices\" : [ ");
-    
-
-    int index = 0;
-    for (int i=0; i<num_faces; i++)
-    {
-        const face_t* face = faces + i;
-
-        if (face->ledge_num != 4) continue;
-        
-        fprintf(output, "%d, %d, %d, %d, %d, %d, \n",
-            index+0,
-            index+1,
-            index+2,
-            index+2,
-            index+3,
-            index+0);
-        index = index + 4;
-        
-    }
-    
-    fprintf(output, "]\n");
+    fprintf(vertices_out, "] }\n");
+    fprintf(indices_out,  "] }\n");    
 }
 
-static void to_json(FILE* output, const char* file)
+static void to_json(FILE* vertices_out, FILE* indices_out, const char* file)
 {
     char* data = read_entire_file(file);
 
@@ -208,7 +194,8 @@ static void to_json(FILE* output, const char* file)
 
     num_faces = header->faces.size / sizeof(face_t);
     faces = (face_t*)(data + header->faces.offset);
-    faces_to_json(output);
+
+    faces_to_json(vertices_out, indices_out);
 
     free(data);
 }
@@ -216,17 +203,24 @@ static void to_json(FILE* output, const char* file)
 int main(int argc, char** argv)
 {
     if (argc < 2) fatal("Usage: %s <filename.bsp>\n", argv[0]);
-    
 
     for (int i=1; i<argc; i++)
     {
-        char* output_file_name;
-        int error = asprintf(&output_file_name, "%s.json", argv[i]);
-        if (error < 0) fatal("Unable to compute output filename");
-        puts(output_file_name);
-        FILE* output = fopen(output_file_name, "w");
-        if(!output) fatal("Error opening %s", output_file_name);
-        to_json(output, argv[i]);
+        char* filenames[2];
+        FILE* files[2];
+        char* types[] = {"vertices", "indices"};
+        
+        for (int j=0; j<2; j++) {
+            int error = asprintf(&filenames[j], "%s.%s.json", argv[i], types[j]);
+            if (error < 0) fatal("Unable to compute output filename");
+            puts(filenames[j]);
+            files[j] = fopen(filenames[j], "w");
+            if(!files[j]) fatal("Error opening %s", filenames[j]);
+        }
+        to_json(files[0], files[1], argv[i]);
+        
+        fclose(files[0]);
+        fclose(files[1]);
     }
     
     return EXIT_SUCCESS;

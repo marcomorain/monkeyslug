@@ -60,6 +60,7 @@ $(function() {
 
       program.pMatrixUniform  = gl.getUniformLocation(program, 'uPMatrix');
       program.mvMatrixUniform = gl.getUniformLocation(program, 'uMVMatrix');
+      program.normalMatrix = gl.getUniformLocation(program, 'normalMatrix');
       
       return program;
   }
@@ -83,18 +84,22 @@ $(function() {
   
   var triangle = null;
   
-  $.getJSON('vertices.json', function(data) {
-    triangle = new Buffer(webgl, data.verts_and_normals, data.indices);
+  $.getJSON('e1m1.bsp.vertices.json', function(vertices) {
+    $.getJSON('e1m1.bsp.indices.json', function(indices) {
+      triangle = new Buffer(webgl, vertices.vertices, indices.indices);
+    });
   }).error(function(e) { console.log(e); console.log("error"); })
   
   
 
-  var mvMatrix = mat4.create();
-  var pMatrix = mat4.create();
+  var mvMatrix      = mat4.create();
+  var pMatrix       = mat4.create();
+  var normalMatrix  = mat4.create();
 
   function setMatrixUniforms(gl) {
       gl.uniformMatrix4fv(shaderProgram.pMatrixUniform,  false, pMatrix);
       gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+      gl.uniformMatrix4fv(shaderProgram.normalMatrix,    false, normalMatrix);
   }
   
   var mouse_x = 0;
@@ -197,6 +202,14 @@ $(function() {
     }
       
     mat4.translate(mvMatrix, player);
+    
+    
+    mat4.inverse(mvMatrix, normalMatrix);
+    mat4.transpose(normalMatrix);
+
+    var nUniform = gl.getUniformLocation(shaderProgram, "uNormalMatrix");
+    gl.uniformMatrix4fv(nUniform, false, normalMatrix);
+    
         
     if (triangle) {
       
