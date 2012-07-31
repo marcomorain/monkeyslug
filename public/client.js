@@ -11,13 +11,15 @@ $(function() {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.index_buffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,  new Uint16Array(indices),   gl.STATIC_DRAW);
     
-    self.num_triangles = indices.length / 3;
+    self.num_elements = indices.length;
     
     console.log(self);
   }
       
   function getShader(gl, id) {
       var script = $(id).text();
+      
+      console.log(script);
 
       var shader_types = {
         'x-shader/x-fragment' : gl.FRAGMENT_SHADER,
@@ -60,7 +62,7 @@ $(function() {
 
       program.pMatrixUniform  = gl.getUniformLocation(program, 'uPMatrix');
       program.mvMatrixUniform = gl.getUniformLocation(program, 'uMVMatrix');
-      program.normalMatrix = gl.getUniformLocation(program, 'normalMatrix');
+      program.normalMatrix = gl.getUniformLocation(program, 'uNormalMatrix');
       
       return program;
   }
@@ -200,17 +202,14 @@ $(function() {
     {
       player = vec3.add(player, [0, 0, speed]);
     }
-      
+
+
     mat4.translate(mvMatrix, player);
-    
-    
     mat4.inverse(mvMatrix, normalMatrix);
     mat4.transpose(normalMatrix);
-
-    var nUniform = gl.getUniformLocation(shaderProgram, "uNormalMatrix");
-    gl.uniformMatrix4fv(nUniform, false, normalMatrix);
     
-        
+    setMatrixUniforms(gl);
+
     if (triangle) {
       
       var stride = 24;
@@ -220,8 +219,8 @@ $(function() {
       gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, 3, gl.FLOAT, false, stride, 12);
       
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangle.index_buffer);
-      setMatrixUniforms(gl);
-      gl.drawElements(gl.TRIANGLES, triangle.num_triangles, gl.UNSIGNED_SHORT, 0);
+
+      gl.drawElements(gl.TRIANGLES, triangle.num_elements, gl.UNSIGNED_SHORT, 0);
       
     }
   }

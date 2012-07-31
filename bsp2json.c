@@ -9,6 +9,17 @@
 
 #include "utils.c"
 
+FILE* create_output_file(const char* base, const char* description)
+{
+    char* filename;
+    int error = asprintf(&filename, "%s.%s.json", base, description);
+    if (error < 0) fatal("Unable to compute output filename");
+    puts(filename);
+    FILE* result = fopen(filename, "w");
+    if(!result) fatal("Error opening %s", filename);
+    return result;
+}
+
 typedef struct                 // A Directory entry
 {
     int  offset;                // Offset to entry, in bytes, from start of file
@@ -85,17 +96,28 @@ typedef struct
                         //  must be in [0,numvertices[
 } edge_t;
 
-static float*    vertices        = NULL;
-static int       num_vertices    = 0;
-static face_t*   faces           = NULL;
-static int       num_faces       = 0;
-static edge_t*   edges           = NULL;
-static int       num_edges       = 0;
-static int32_t*  list_edges      = NULL;
-static int       num_list_edges  = 0;
-static plane_t*  planes          = NULL;
-static int       num_planes      = 0;
+typedef struct                 // Mip Texture
+{ char   name[16];             // Name of the texture.
+  uint32_t width;                // width of picture, must be a multiple of 8
+  uint32_t height;               // height of picture, must be a multiple of 8
+  uint32_t offset1;              // offset to u_char Pix[width   * height]
+  uint32_t offset2;              // offset to u_char Pix[width/2 * height/2]
+  uint32_t offset4;              // offset to u_char Pix[width/4 * height/4]
+  uint32_t offset8;              // offset to u_char Pix[width/8 * height/8]
+} miptex_t;
 
+static float*       vertices        = NULL;
+static int          num_vertices    = 0;
+static face_t*      faces           = NULL;
+static int          num_faces       = 0;
+static edge_t*      edges           = NULL;
+static int          num_edges       = 0;
+static int32_t*     list_edges      = NULL;
+static int          num_list_edges  = 0;
+static plane_t*     planes          = NULL;
+static int          num_planes      = 0;
+static miptex_t*    miptextures     = NULL;
+static int          num_miptextures = 0;
 
 static edge_t* get_edge(int index)
 {
@@ -116,8 +138,6 @@ static void faces_to_json(FILE* vertices_out, FILE* indices_out)
     for (int i=0; i<num_faces; i++)
     {
         const face_t* face = faces + i;
-        
-        printf("%d edges in face\n", face->ledge_num);
   
         vertex_t* verts = (vertex_t*)vertices;    
         int32_t* first_edge = list_edges +  face->ledge_id;
@@ -173,7 +193,18 @@ static void faces_to_json(FILE* vertices_out, FILE* indices_out)
     fprintf(indices_out,  "] }\n");    
 }
 
-static void to_json(FILE* vertices_out, FILE* indices_out, const char* file)
+/*
+static void textures_to_json()
+{
+    for (int i=0; i<num_miptextures; i++)
+    {
+        miptex_t* texture = miptextures + i;
+        printf("%c\n", texture->name[0]);
+    }
+}
+*/
+
+static void to_json(const char* file)
 {
     char* data = read_entire_file(file);
 
@@ -194,8 +225,18 @@ static void to_json(FILE* vertices_out, FILE* indices_out, const char* file)
 
     num_faces = header->faces.size / sizeof(face_t);
     faces = (face_t*)(data + header->faces.offset);
+    
+    // Bug here? wrong size of miptex struct?
+    num_miptextures = header->miptex.size / sizeof(miptex_t);
+    miptextures = (miptex_t*)data + header->miptex.offset;
 
+    FILE* vertices_out = create_output_file(file, "vertices");
+    FILE* indices_out  = create_output_file(file, "indices");
     faces_to_json(vertices_out, indices_out);
+    fclose(vertices_out);
+    fclose(indices_out);
+
+    //textures_to_json();
 
     free(data);
 }
@@ -203,25 +244,6 @@ static void to_json(FILE* vertices_out, FILE* indices_out, const char* file)
 int main(int argc, char** argv)
 {
     if (argc < 2) fatal("Usage: %s <filename.bsp>\n", argv[0]);
-
-    for (int i=1; i<argc; i++)
-    {
-        char* filenames[2];
-        FILE* files[2];
-        char* types[] = {"vertices", "indices"};
-        
-        for (int j=0; j<2; j++) {
-            int error = asprintf(&filenames[j], "%s.%s.json", argv[i], types[j]);
-            if (error < 0) fatal("Unable to compute output filename");
-            puts(filenames[j]);
-            files[j] = fopen(filenames[j], "w");
-            if(!files[j]) fatal("Error opening %s", filenames[j]);
-        }
-        to_json(files[0], files[1], argv[i]);
-        
-        fclose(files[0]);
-        fclose(files[1]);
-    }
-    
+    for (int i=1; i<argc; i++) to_json(argv[i]);
     return EXIT_SUCCESS;
 }
