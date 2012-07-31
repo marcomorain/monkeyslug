@@ -15,7 +15,6 @@ typedef struct                 // A Directory entry
     int  size;                  // Size of entry in file, in bytes
 } dentry_t;
 
-
 typedef struct                 // The BSP file header
 { int  version;               // Model version, must be 0x17 (23).
   dentry_t entities;           // List of Entities.
@@ -51,13 +50,13 @@ typedef struct
     uint16_t side;      // 0 if in front of the plane, 1 if behind the plane
     int ledge_id;       // first edge in the List of edges
                         //           must be in [0,numledges[
-  uint16_t ledge_num;   // number of edges in the List of edges
-  uint16_t texinfo_id;  // index of the Texture info the face is part of
+    uint16_t ledge_num; // number of edges in the List of edges
+    uint16_t texinfo_id;// index of the Texture info the face is part of
                         //           must be in [0,numtexinfos[ 
-  uint8_t typelight;    // type of lighting, for the face
-  uint8_t baselight;    // from 0xFF (dark) to 0 (bright)
-  uint8_t light[2];     // two additional light models  
-  int lightmap;         // Pointer inside the general light map, or -1
+    uint8_t typelight;  // type of lighting, for the face
+    uint8_t baselight;  // from 0xFF (dark) to 0 (bright)
+    uint8_t light[2];   // two additional light models  
+    int lightmap;       // Pointer inside the general light map, or -1
                         // this define the start of the face light map
 } face_t;
 
@@ -78,77 +77,139 @@ typedef struct
     int type;           // Type of plane, depending on normal vector.
 } plane_t;
 
-static void planes_to_json(FILE* output, plane_t* planes, int num_planes)
+typedef struct
 {
-    printf("Num planes: %d\n", num_planes);
+    uint16_t vertex0;   // index of the start vertex
+                        //  must be in [0,numvertices[
+    uint16_t vertex1;   // index of the end vertex
+                        //  must be in [0,numvertices[
+} edge_t;
 
-    fprintf(output, "\"planes\" = [ ");
+static float*    vertices        = NULL;
+static int       num_vertices    = 0;
+static face_t*   faces           = NULL;
+static int       num_faces       = 0;
+static edge_t*   edges           = NULL;
+static int       num_edges       = 0;
+static int32_t*  list_edges      = NULL;
+static int       num_list_edges  = 0;
+static plane_t*  planes          = NULL;
+static int       num_planes      = 0;
 
-    for (int i=0; i<num_planes; i++)
-    {
-    }
 
-    fprintf(output, "];\n");
+static edge_t* get_edge(int index)
+{
+    if (index >= num_edges) fatal("Invalid edge index %d", index);
+    if (index < 0) fatal("Negative edge index");
+    return edges + index;
 }
 
-static void faces_to_json(FILE* output, const face_t* faces, int num_faces)
+static void faces_to_json(FILE* output)
 {
     printf("Num faces: %d\n", num_faces);
 
-    fprintf(output, "\"faces\" = [ ");
+    fprintf(output, "\"verts_and_normals\" : [ ");
 
     for (int i=0; i<num_faces; i++)
     {
         const face_t* face = faces + i;
-        fprintf(output, "  {\n");
-        fprintf(output, "    plane_id:   %d,\n",       face->plane_id);
-        fprintf(output, "    side:       %d,\n",           face->side);
-        fprintf(output, "    ledge_id:   %d,\n",       face->ledge_id);
-        fprintf(output, "    ledge_num:  %d,\n",      face->ledge_num);
-        fprintf(output, "    texinfo_id: %d,\n",     face->texinfo_id);
-        fprintf(output, "    typelight:  %d,\n",      face->typelight);
-        fprintf(output, "    baselight:  %d,\n",      face->baselight);
-        fprintf(output, "    light: [%d, %d],\n",    face->light[0], face->light[1]);
-        fprintf(output, "    lightmap:   %d\n",       face->lightmap);
-        fprintf(output, "  },\n");
+
+        if (face->ledge_num != 4) continue;
+                        /*
+            fprintf(output, "  {\n");
+            fprintf(output, "    plane_id:   %d,\n",       face->plane_id);
+            fprintf(output, "    side:       %d,\n",           face->side);
+//               printf("    ledge_id:   %d,\n",      face->ledge_id);
+//               printf("    ledge_num:  %d,\n",      face->ledge_num);
+            fprintf(output, "    texinfo_id: %d,\n",     face->texinfo_id);
+            fprintf(output, "    typelight:  %d,\n",      face->typelight);
+            fprintf(output, "    baselight:  %d,\n",      face->baselight);
+            fprintf(output, "    light: [%d, %d],\n",    face->light[0], face->light[1]);
+            fprintf(output, "    lightmap:   %d\n",       face->lightmap);
+*/
+
+        vertex_t* verts = (vertex_t*)vertices;    
+        int32_t* first_edge = list_edges +  face->ledge_id;
+        
+        plane_t* plane = planes + face->plane_id;
+
+        for (int e=0; e<face->ledge_num; e++)
+        {
+            int32_t edge_index = first_edge[e];
+            int v0, v1;
+            if (edge_index > 0)
+            {
+                edge_t* edge = get_edge(edge_index);
+                v0 = edge->vertex0;
+                v1 = edge->vertex1;
+            }
+            else
+            {
+                // swap winding
+                edge_t* edge = get_edge(-edge_index);
+                v0 = edge->vertex1;
+                v1 = edge->vertex0;
+            }
+
+            fprintf(output, "%g, %g, %g, %g, %g, %g, \n",
+                verts[v0].x,
+                verts[v0].y,
+                verts[v0].z,
+                plane->normal.x,
+                plane->normal.y,
+                plane->normal.z);
+        }
     }
 
-    fprintf(output, "];\n");    
-}
-
-static void vertices_to_json(FILE* output, const float* vertices, int num_vertices)
-{
-    printf("num vertices: %d\n", num_vertices);
+    fprintf(output, "]\n");
     
-    fprintf(output, "\"vertices\" = [ ");
+    fprintf(output, "\"indices\" : [ ");
+    
 
-    for (int i=0; i<num_vertices; i++)
+    int index = 0;
+    for (int i=0; i<num_faces; i++)
     {
-        fprintf(output, "%g", vertices[i]);
-        if (i < (num_vertices - 1)) fprintf(output, ", ");
-        if ((i%8)==0) fprintf(output, "\n");
+        const face_t* face = faces + i;
+
+        if (face->ledge_num != 4) continue;
+        
+        fprintf(output, "%d, %d, %d, %d, %d, %d, \n",
+            index+0,
+            index+1,
+            index+2,
+            index+2,
+            index+3,
+            index+0);
+        index = index + 4;
+        
     }
-    fprintf(output, "];\n");
+    
+    fprintf(output, "]\n");
 }
+
 static void to_json(FILE* output, const char* file)
 {
     char* data = read_entire_file(file);
 
     dheader_t* header = (dheader_t*)data;
-    printf("Reading %s BSP version %x\n", file, header->version);
+    printf("Reading %s BSP version %d\n", file, header->version);
     
-    const int num_vertices = header->vertices.size / sizeof(float);
-    float* vertices = (float*)(data + header->vertices.offset);
-    vertices_to_json(output, vertices, num_vertices - num_vertices);
+    num_vertices = header->vertices.size / sizeof(float);
+    vertices = (float*)(data + header->vertices.offset);
+
+    num_edges = header->edges.size / sizeof(edge_t);
+    edges = (edge_t*)(data + header->edges.offset);
     
-    const int num_faces = header->faces.size / sizeof(face_t);
-    face_t* faces = (face_t*)(data + header->faces.offset);
-    faces_to_json(output, faces, num_faces);
+    num_list_edges = header->ledges.size / sizeof(uint16_t);
+    list_edges = (int32_t*)(data + header->ledges.offset);
     
-    const int num_planes = header->planes.size / sizeof(plane_t);
-    plane_t* planes = (plane_t*)(data + header->planes.offset);
-    planes_to_json(output, planes, num_planes);
-    
+    num_planes = header->planes.size / sizeof(plane_t);
+    planes = (plane_t*)(data + header->planes.offset);
+
+    num_faces = header->faces.size / sizeof(face_t);
+    faces = (face_t*)(data + header->faces.offset);
+    faces_to_json(output);
+
     free(data);
 }
 

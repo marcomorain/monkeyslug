@@ -1,14 +1,19 @@
 $(function() {
   "use strict";
   
-  var Buffer = function(gl, vertices) {
+  var Buffer = function(gl, vertices, indices) {
     var self = this;
     self.vertex_buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, self.vertex_buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    self.vertex_buffer.itemSize = 3;
-    self.vertex_buffer.numItems = vertices.length / 3;
-    console.log(self.vertex_buffer);
+    gl.bufferData(gl.ARRAY_BUFFER,          new Float32Array(vertices), gl.STATIC_DRAW);
+    
+    self.index_buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, self.index_buffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,  new Uint16Array(indices),   gl.STATIC_DRAW);
+    
+    self.num_triangles = indices.length / 3;
+    
+    console.log(self);
   }
       
   function getShader(gl, id) {
@@ -25,7 +30,7 @@ $(function() {
       gl.compileShader(shader);
 
       if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-          alert(gl.getShaderInfoLog(shader));
+          console.log(gl.getShaderInfoLog(shader));
           return null;
       }
 
@@ -42,13 +47,16 @@ $(function() {
       gl.linkProgram(program);
 
       if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-          alert("Could not initialise shaders");
+          console.log("Could not initialise shaders");
       }
 
       gl.useProgram(program);
 
       program.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
       gl.enableVertexAttribArray(program.vertexPositionAttribute);
+      
+      program.vertexNormalAttribute = gl.getAttribLocation(program, 'aVertexNormal');
+      gl.enableVertexAttribArray(program.vertexNormalAttribute);
 
       program.pMatrixUniform  = gl.getUniformLocation(program, 'uPMatrix');
       program.mvMatrixUniform = gl.getUniformLocation(program, 'uMVMatrix');
@@ -58,7 +66,7 @@ $(function() {
   
   var init_webgl = function(canvas) {
     var webgl = canvas.getContext("experimental-webgl");
-    if (!webgl) alert('Could not initialise WebGL');
+    if (!webgl) console.log('Could not initialise WebGL');
     webgl.clearColor(0.2, 0.2, 0.2, 1.0);
     webgl.enable(webgl.DEPTH_TEST);
     return webgl;
@@ -76,8 +84,9 @@ $(function() {
   var triangle = null;
   
   $.getJSON('vertices.json', function(data) {
-    triangle = new Buffer(webgl, data.vertices);
-  });
+    triangle = new Buffer(webgl, data.verts_and_normals, data.indices);
+  }).error(function(e) { console.log(e); console.log("error"); })
+  
   
 
   var mvMatrix = mat4.create();
@@ -190,10 +199,17 @@ $(function() {
     mat4.translate(mvMatrix, player);
         
     if (triangle) {
+      
+      var stride = 24;
+      
       gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
-      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triangle.vertex_buffer.itemSize, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, stride, 0);
+      gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, 3, gl.FLOAT, false, stride, 12);
+      
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangle.index_buffer);
       setMatrixUniforms(gl);
-      gl.drawArrays(gl.LINE_LOOP, 0,  triangle.vertex_buffer.numItems);
+      gl.drawElements(gl.TRIANGLES, triangle.num_triangles, gl.UNSIGNED_SHORT, 0);
+      
     }
   }
 
