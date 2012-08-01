@@ -79,6 +79,12 @@ typedef struct
     float z;                    // but coded in floating point
 } vertex_t;
 
+typedef struct                 // Bounding Box, Short values
+{
+    int16_t   min;                 // minimum values of X,Y,Z
+    int16_t   max;                 // maximum values of X,Y,Z
+} bboxshort_t;
+
 typedef struct
 {
     vertex_t normal;    // Vector orthogonal to plane (Nx,Ny,Nz)
@@ -95,6 +101,34 @@ typedef struct
     uint16_t vertex1;   // index of the end vertex
                         //  must be in [0,numvertices[
 } edge_t;
+
+typedef struct
+{
+    int plane_id;       // The plane that splits the node
+                        //           must be in [0,numplanes[
+    uint16_t front;     // If bit15==0, index of Front child node
+                        // If bit15==1, ~front = index of child leaf
+    uint16_t back;      // If bit15==0, id of Back child node
+                        // If bit15==1, ~back =  id of child leaf
+    bboxshort_t box;    // Bounding box of node and all childs
+    uint16_t face_id;   // Index of first Polygons in the node
+    uint16_t face_num;   // Number of faces in the node
+} node_t;
+
+typedef struct
+{ int type;                   // Special type of leaf
+  int vislist;                // Beginning of visibility lists
+                               //     must be -1 or in [0,numvislist[
+  bboxshort_t bound;           // Bounding box of the leaf
+  uint16_t lface_id;            // First item of the list of faces
+                               //     must be in [0,numlfaces[
+  uint16_t lface_num;           // Number of faces in the leaf  
+  uint8_t sndwater;             // level of the four ambient sounds:
+  uint8_t sndsky;               //   0    is no sound
+  uint8_t sndslime;             //   0xFF is maximum volume
+  uint8_t sndlava;              //
+} dleaf_t;
+
 
 typedef struct                 // Mip Texture
 { char   name[16];             // Name of the texture.
@@ -118,12 +152,68 @@ static plane_t*     planes          = NULL;
 static int          num_planes      = 0;
 static miptex_t*    miptextures     = NULL;
 static int          num_miptextures = 0;
+static node_t*      nodes           = NULL;
+static int          num_nodes       = 0;
 
 static edge_t* get_edge(int index)
 {
     if (index >= num_edges) fatal("Invalid edge index %d", index);
     if (index < 0) fatal("Negative edge index");
     return edges + index;
+}
+
+static void face_to_json(const face_t* face, int* index_base, FILE* vertices_out, FILE* indices_out)
+{
+    vertex_t* verts = (vertex_t*)vertices;    
+    int32_t* first_edge = list_edges +  face->ledge_id;
+    
+    plane_t* plane = planes + face->plane_id;
+    
+    int last_face = 0; // to: recompute this
+
+    for (int e=0; e<face->ledge_num; e++)
+    {
+        int32_t edge_index = first_edge[e];
+        int v0, v1;
+        if (edge_index > 0)
+        {
+            edge_t* edge = get_edge(edge_index);
+            v0 = edge->vertex0;
+            v1 = edge->vertex1;
+        }
+        else // swap winding
+        {
+            edge_t* edge = get_edge(-edge_index);
+            v0 = edge->vertex1;
+            v1 = edge->vertex0;
+        }
+        
+        int last_vertex = (e == face->ledge_num - 1) && last_face;
+
+        fprintf(vertices_out, "%g, %g, %g, %g, %g, %g%c \n",
+            verts[v0].x,
+            verts[v0].y,
+            verts[v0].z,
+            plane->normal.x,
+            plane->normal.y,
+            plane->normal.z,
+            last_vertex ? ' ' : ',');
+
+    }
+    
+    int base = *index_base;
+    
+    for (int f=1; f < face->ledge_num - 1; f++)
+    {
+        int last_index = (f == face->ledge_num - 2) && last_face;
+        fprintf(indices_out, "%d, %d, %d%c \n",
+            base,
+            base + f,
+            base + f + 1,
+            last_index ? ' ' : ',');
+    }
+    (*index_base) = base + face->ledge_num;
+    
 }
 
 static void faces_to_json(FILE* vertices_out, FILE* indices_out)
@@ -138,61 +228,13 @@ static void faces_to_json(FILE* vertices_out, FILE* indices_out)
     for (int i=0; i<num_faces; i++)
     {
         const face_t* face = faces + i;
-  
-        vertex_t* verts = (vertex_t*)vertices;    
-        int32_t* first_edge = list_edges +  face->ledge_id;
         
-        plane_t* plane = planes + face->plane_id;
-        
-        int last_face = (i == num_faces -1);
-
-        for (int e=0; e<face->ledge_num; e++)
-        {
-            int32_t edge_index = first_edge[e];
-            int v0, v1;
-            if (edge_index > 0)
-            {
-                edge_t* edge = get_edge(edge_index);
-                v0 = edge->vertex0;
-                v1 = edge->vertex1;
-            }
-            else // swap winding
-            {
-                edge_t* edge = get_edge(-edge_index);
-                v0 = edge->vertex1;
-                v1 = edge->vertex0;
-            }
-            
-            int last_vertex = (e == face->ledge_num - 1) && last_face;
-
-            fprintf(vertices_out, "%g, %g, %g, %g, %g, %g%c \n",
-                verts[v0].x,
-                verts[v0].y,
-                verts[v0].z,
-                plane->normal.x,
-                plane->normal.y,
-                plane->normal.z,
-                last_vertex ? ' ' : ',');
-
-        }
-        
-        
-        for (int f=1; f < face->ledge_num - 1; f++)
-        {
-            int last_index = (f == face->ledge_num - 2) && last_face;
-            fprintf(indices_out, "%d, %d, %d%c \n",
-                index_base,
-                index_base + f,
-                index_base + f + 1,
-                last_index ? ' ' : ',');
-        }
-        index_base += face->ledge_num;
+        face_to_json(face, &index_base, vertices_out, indices_out);
     }
-
+  
     fprintf(vertices_out, "] }\n");
     fprintf(indices_out,  "] }\n");    
 }
-
 /*
 static void textures_to_json()
 {
@@ -225,6 +267,9 @@ static void to_json(const char* file)
 
     num_faces = header->faces.size / sizeof(face_t);
     faces = (face_t*)(data + header->faces.offset);
+    
+    num_nodes = header->nodes.size / sizeof(node_t);
+    nodes = (node_t*)(data + header->nodes.offset);
     
     // Bug here? wrong size of miptex struct?
     num_miptextures = header->miptex.size / sizeof(miptex_t);

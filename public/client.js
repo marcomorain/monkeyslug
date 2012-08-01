@@ -250,9 +250,19 @@ $(function() {
   $(document).keydown(function(e) { keys[e.which] = true;  });
   $(document).keyup(  function(e) { keys[e.which] = false; });
   
+  
+  var mouse = false;
+  $game.mousedown(function(e){
+    mouse = true;
+  });
+  
+  $(document).mouseup(function(e){
+    mouse = false;
+  });
+  
   $game.mousemove(function(e) {
     
-    if (!document.webkitFullscreenElement) return;
+    if (!mouse && !document.webkitFullscreenElement) return;
     var orig = e.originalEvent;
     
     var x = orig.webkitMovementX || 0;
@@ -260,7 +270,7 @@ $(function() {
     
     mouse_x += x;
     mouse_y += y;
-  });    
+  });
   
   window.webkitRequestAnimationFrame(update, game);
 
