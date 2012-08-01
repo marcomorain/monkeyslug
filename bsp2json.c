@@ -79,11 +79,17 @@ typedef struct
     float z;                    // but coded in floating point
 } vertex_t;
 
+typedef struct                 // Bounding Box, Float values
+{ vertex_t   min;                // minimum values of X,Y,Z
+  vertex_t   max;                // maximum values of X,Y,Z
+} boundbox_t;
+
 typedef struct                 // Bounding Box, Short values
 {
-    int16_t   min;                 // minimum values of X,Y,Z
-    int16_t   max;                 // maximum values of X,Y,Z
+    int16_t   min[3];                 // minimum values of X,Y,Z
+    int16_t   max[3];                 // maximum values of X,Y,Z
 } bboxshort_t;
+
 
 typedef struct
 {
@@ -140,10 +146,23 @@ typedef struct                 // Mip Texture
   uint32_t offset8;              // offset to u_char Pix[width/8 * height/8]
 } miptex_t;
 
+typedef struct
+{
+    boundbox_t bound;            // The bounding box of the Model
+    vertex_t origin;               // origin of model, usually (0,0,0)
+    int node_id0;               // index of first BSP node
+    int node_id1;               // index of the first Clip node
+    int node_id2;               // index of the second Clip node
+    int node_id3;               // usually zero
+    int numleafs;               // number of BSP leaves
+    int face_id;                // index of Faces
+    int face_num;               // number of Faces
+} model_t;
+
 static float*       vertices        = NULL;
 static int          num_vertices    = 0;
-static face_t*      faces           = NULL;
-static int          num_faces       = 0;
+static face_t*      _faces          = NULL;
+static int          _num_faces      = 0;
 static edge_t*      edges           = NULL;
 static int          num_edges       = 0;
 static int32_t*     list_edges      = NULL;
@@ -154,6 +173,8 @@ static miptex_t*    miptextures     = NULL;
 static int          num_miptextures = 0;
 static node_t*      nodes           = NULL;
 static int          num_nodes       = 0;
+static model_t*     models          = NULL;
+static int          num_models      = 0;
 
 static edge_t* get_edge(int index)
 {
@@ -162,8 +183,18 @@ static edge_t* get_edge(int index)
     return edges + index;
 }
 
-static void face_to_json(const face_t* face, int* index_base, FILE* vertices_out, FILE* indices_out)
+static face_t* get_face(int index)
 {
+    if (index >= _num_faces) fatal("Invalid face index %d", index);
+    if (index < 0) fatal("Negative face index");
+    return _faces + index;
+}
+
+static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE* indices_out)
+{
+    printf("Processing face %08x\n", face_id);
+
+    const face_t* face = get_face(face_id);
     vertex_t* verts = (vertex_t*)vertices;    
     int32_t* first_edge = list_edges +  face->ledge_id;
     
@@ -216,21 +247,47 @@ static void face_to_json(const face_t* face, int* index_base, FILE* vertices_out
     
 }
 
-static void faces_to_json(FILE* vertices_out, FILE* indices_out)
+static void node_to_json(int node_id, int* index_base, FILE* vertices_out, FILE* indices_out);
+
+static void node_leaf_index_to_json(int index, int* index_base, FILE* vertices_out, FILE* indices_out)
 {
-    printf("Num faces: %d\n", num_faces);
+    const static unsigned leaf_mask = 0x8000;
+    if (index & leaf_mask) return;
+    if (index == 0) return;
+    node_to_json(index, index_base, vertices_out, indices_out);
+}
+
+static void node_to_json(int node_id, int* index_base, FILE* vertices_out, FILE* indices_out)
+{
+    printf("Processing node %d\n", node_id);
+    
+    node_t* node = nodes + node_id;
+
+    printf("Node: plane %08x faces: %d first: %08x front %08x back %08x\n",
+    node->plane_id, node->face_num, node->face_id, node->front, node->back);
+
+    node_leaf_index_to_json(node->front, index_base, vertices_out, indices_out);
+
+    for (int i = 0; i< node->face_num; i++)
+    {
+        face_to_json(node->face_id + i, index_base, vertices_out, indices_out);
+    }
+
+    node_leaf_index_to_json(node->back, index_base, vertices_out, indices_out);
+}
+
+static void nodes_to_json(FILE* vertices_out, FILE* indices_out)
+{
+    printf("Num faces: %d\n", _num_faces);
 
     fprintf(vertices_out, "{ \"vertices\" : [ ");
     fprintf(indices_out,  "{ \"indices\"  : [ ");
-
+    
     int index_base = 0;
+    
+    int bsp_root = models[0].node_id0;
 
-    for (int i=0; i<num_faces; i++)
-    {
-        const face_t* face = faces + i;
-        
-        face_to_json(face, &index_base, vertices_out, indices_out);
-    }
+    node_to_json(bsp_root, &index_base, vertices_out, indices_out);
   
     fprintf(vertices_out, "] }\n");
     fprintf(indices_out,  "] }\n");    
@@ -265,11 +322,14 @@ static void to_json(const char* file)
     num_planes = header->planes.size / sizeof(plane_t);
     planes = (plane_t*)(data + header->planes.offset);
 
-    num_faces = header->faces.size / sizeof(face_t);
-    faces = (face_t*)(data + header->faces.offset);
+    _num_faces = header->faces.size / sizeof(face_t);
+    _faces = (face_t*)(data + header->faces.offset);
     
     num_nodes = header->nodes.size / sizeof(node_t);
     nodes = (node_t*)(data + header->nodes.offset);
+    
+    num_models = header->models.size / sizeof(model_t);
+    models = (model_t*)(data + header->models.offset);
     
     // Bug here? wrong size of miptex struct?
     num_miptextures = header->miptex.size / sizeof(miptex_t);
@@ -277,7 +337,7 @@ static void to_json(const char* file)
 
     FILE* vertices_out = create_output_file(file, "vertices");
     FILE* indices_out  = create_output_file(file, "indices");
-    faces_to_json(vertices_out, indices_out);
+    nodes_to_json(vertices_out, indices_out);
     fclose(vertices_out);
     fclose(indices_out);
 
