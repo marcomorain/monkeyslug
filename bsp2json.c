@@ -192,7 +192,7 @@ static face_t* get_face(int index)
 
 static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE* indices_out)
 {
-    printf("Processing face %08x\n", face_id);
+    //printf("Processing face %08x\n", face_id);
 
     const face_t* face = get_face(face_id);
     vertex_t* verts = (vertex_t*)vertices;    
@@ -259,12 +259,12 @@ static void node_leaf_index_to_json(int index, int* index_base, FILE* vertices_o
 
 static void node_to_json(int node_id, int* index_base, FILE* vertices_out, FILE* indices_out)
 {
-    printf("Processing node %d\n", node_id);
+    //printf("Processing node %d\n", node_id);
     
     node_t* node = nodes + node_id;
 
-    printf("Node: plane %08x faces: %d first: %08x front %08x back %08x\n",
-    node->plane_id, node->face_num, node->face_id, node->front, node->back);
+    //printf("Node: plane %08x faces: %d first: %08x front %08x back %08x\n",
+    //node->plane_id, node->face_num, node->face_id, node->front, node->back);
 
     node_leaf_index_to_json(node->front, index_base, vertices_out, indices_out);
 
@@ -334,6 +334,14 @@ static void to_json(const char* file)
     // Bug here? wrong size of miptex struct?
     num_miptextures = header->miptex.size / sizeof(miptex_t);
     miptextures = (miptex_t*)data + header->miptex.offset;
+
+
+	for (int i=0; i<header->entities.size; i++)
+	{
+		fputc(data[header->entities.offset + i], stdout);
+	}
+	
+	puts("");
 
     FILE* vertices_out = create_output_file(file, "vertices");
     FILE* indices_out  = create_output_file(file, "indices");
