@@ -260,6 +260,18 @@ $(function() {
     mouse = false;
   });
   
+  
+  var go_fullscreen = function(){
+    game.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
+    game.webkitRequestPointerLock();
+  };
+  
+  $game.dblclick(function(e){
+    if (!document.webkitFullscreenElement) {
+      go_fullscreen();
+    }
+  });
+  
   $game.mousemove(function(e) {
     
     if (!mouse && !document.webkitFullscreenElement) return;
@@ -269,13 +281,12 @@ $(function() {
     var y = orig.webkitMovementY || 0;
     
     mouse_x += x;
-    mouse_y += y;
+    mouse_y -= y;
   });
   
   window.webkitRequestAnimationFrame(update, game);
 
   $('#fullscreen').click(function(){
-    game.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
-    game.webkitRequestPointerLock();
+    go_fullscreen();
   });
 });
