@@ -285,6 +285,11 @@ static void nodes_to_json(FILE* vertices_out, FILE* indices_out)
     
     int index_base = 0;
     
+    printf("Model[0] origin: %g %g %g\n",
+        models[0].origin.x,
+        models[0].origin.y,
+        models[0].origin.z);
+    
     int bsp_root = models[0].node_id0;
 
     node_to_json(bsp_root, &index_base, vertices_out, indices_out);
@@ -292,16 +297,6 @@ static void nodes_to_json(FILE* vertices_out, FILE* indices_out)
     fprintf(vertices_out, "] }\n");
     fprintf(indices_out,  "] }\n");    
 }
-/*
-static void textures_to_json()
-{
-    for (int i=0; i<num_miptextures; i++)
-    {
-        miptex_t* texture = miptextures + i;
-        printf("%c\n", texture->name[0]);
-    }
-}
-*/
 
 static void to_json(const char* file)
 {

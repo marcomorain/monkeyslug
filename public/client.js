@@ -13,13 +13,13 @@ $(function() {
     
     self.num_elements = indices.length;
     
-    console.log(self);
+    //console.log(self);
   }
       
   function getShader(gl, id) {
       var script = $(id).text();
       
-      console.log(script);
+      //console.log(script);
 
       var shader_types = {
         'x-shader/x-fragment' : gl.FRAGMENT_SHADER,
@@ -109,13 +109,18 @@ $(function() {
 
   
   
-  var yaw = 0;
-  var roll = 0;
-  var pitch = 0;
+
 
   // Player position at origin
-  var player = vec3.create([0,0,0]);
-  
+  // E1M1
+  // "classname" "info_player_start"
+  // "origin" "480 -352 88"
+  // "angle" "90"
+  var player = vec3.create([-480, 352, -88]);
+  var yaw = -Math.PI/2;
+  var roll = 0;
+  var pitch = 0;
+    
   var mouse_sensitivity = 0.01;
   var fov = 45;
   var near_clip = 4;
@@ -153,7 +158,7 @@ $(function() {
     mat4.identity(mvMatrix);
 
     yaw   += mouse_sensitivity * mouse_x;
-    pitch += mouse_sensitivity * mouse_y;
+    pitch -= mouse_sensitivity * mouse_y;
     
     pitch = clamp(pitch, pitch_min, pitch_max);
  
@@ -166,12 +171,9 @@ $(function() {
     mat4.rotate(mvMatrix, roll,    [1, 0, 0]);
     mat4.rotate(mvMatrix, pitch,   [0, 1, 0]);
     mat4.rotate(mvMatrix, yaw,     [0, 0, 1]);
-
-    var vec_walk   = vec3.create([0, speed, 0]);
-    var vec_strafe = vec3.create([speed, 0, 0]);
     
-    vec_walk   = vec3.scale(vec3.create([-Math.cos(yaw),  Math.sin(yaw), 0]), speed);
-    vec_strafe = vec3.scale(vec3.create([-Math.sin(yaw),  -Math.cos(yaw), 0]), speed);
+    var vec_walk   = vec3.scale(vec3.create([-Math.cos(yaw),  Math.sin(yaw), 0]), speed);
+    var vec_strafe = vec3.scale(vec3.create([-Math.sin(yaw),  -Math.cos(yaw), 0]), speed);
 
     if (keys[up])
     {
