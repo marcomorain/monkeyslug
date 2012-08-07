@@ -68,27 +68,30 @@ $(function() {
   }
   
   var init_webgl = function(canvas) {
-    var webgl = canvas.getContext("experimental-webgl");
-    if (!webgl) console.log('Could not initialise WebGL');
-    webgl.clearColor(0.2, 0.2, 0.2, 1.0);
-    webgl.enable(webgl.DEPTH_TEST);
-    return webgl;
+    var gl = canvas.getContext("experimental-webgl");
+    if (!gl) console.log('Could not initialise WebGL');
+    gl.clearColor(0.2, 0.2, 0.2, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+    gl.cullFace(gl.FRONT);
+    gl.enable(gl.CULL_FACE)
+    
+    return gl;
   };
     
   
   var game = $('#game')[0];
   var $game = $(game);
   var context = null; //game.getContext("2d");
-  var webgl = init_webgl(game);
+  var gl = init_webgl(game);
   
-  var shaderProgram = initShaders(webgl);
+  var shaderProgram = initShaders(gl);
   
   
   var triangle = null;
   
   $.getJSON('e1m1.bsp.vertices.json', function(vertices) {
     $.getJSON('e1m1.bsp.indices.json', function(indices) {
-      triangle = new Buffer(webgl, vertices.vertices, indices.indices);
+      triangle = new Buffer(gl, vertices.vertices, indices.indices);
     });
   }).error(function(e) { console.log(e); console.log("error"); })
   
@@ -228,7 +231,7 @@ $(function() {
   }
 
   var update = function(dt) {
-    render(game, context, webgl);
+    render(game, context, gl);
     mouse_x = 0;
     mouse_y = 0;
     window.webkitRequestAnimationFrame(update, game);

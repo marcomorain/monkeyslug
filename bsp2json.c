@@ -298,6 +298,41 @@ static void nodes_to_json(FILE* vertices_out, FILE* indices_out)
     fprintf(indices_out,  "] }\n");    
 }
 
+
+
+
+
+
+static void entities_to_json(const char* data)
+{
+
+    enum
+    {
+        PARSE_START,    // } => IN_ENTITY
+        IN_ENTITY,      // " => IN_SEP
+        IN_SEP,         // " => IN KEY
+        IN_KEY,         // " => IN VALUE
+        IN_VALUE,       // " => IN_ENTITY
+    };
+    
+    char key[1012];
+    char value[1024];
+    
+    int state = PARSE_START;
+    
+    for (char c = *data; c != '{'; c = *(data++)) {
+        
+    }
+    
+    switch(c)
+    {
+        case ' ':
+        case '\n':
+        case '\r':
+        case '\t':
+    }
+}
+
 static void to_json(const char* file)
 {
     char* data = read_entire_file(file);
