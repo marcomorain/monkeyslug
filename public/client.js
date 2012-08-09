@@ -59,6 +59,9 @@ $(function() {
       
       program.vertexNormalAttribute = gl.getAttribLocation(program, 'aVertexNormal');
       gl.enableVertexAttribArray(program.vertexNormalAttribute);
+      
+      program.vertexColorAttribute = gl.getAttribLocation(program, 'aVertexColor');
+      gl.enableVertexAttribArray(program.vertexColorAttribute);
 
       program.pMatrixUniform  = gl.getUniformLocation(program, 'uPMatrix');
       program.mvMatrixUniform = gl.getUniformLocation(program, 'uMVMatrix');
@@ -81,7 +84,6 @@ $(function() {
   
   var game = $('#game')[0];
   var $game = $(game);
-  var context = null; //game.getContext("2d");
   var gl = init_webgl(game);
   
   var shaderProgram = initShaders(gl);
@@ -89,8 +91,11 @@ $(function() {
   
   var triangle = null;
   
-  $.getJSON('e1m1.bsp.vertices.json', function(vertices) {
-    $.getJSON('e1m1.bsp.indices.json', function(indices) {
+  var map = 'e1m1';
+  map = 'start';
+  
+  $.getJSON(map + '.bsp.vertices.json', function(vertices) {
+    $.getJSON(map + '.bsp.indices.json', function(indices) {
       triangle = new Buffer(gl, vertices.vertices, indices.indices);
     });
   }).error(function(e) { console.log(e); console.log("error"); })
@@ -112,7 +117,6 @@ $(function() {
 
   
   
-
 
   // Player position at origin
   // E1M1
@@ -146,7 +150,7 @@ $(function() {
     return Math.max(min, Math.min(n, max));
   }
   
-  var render = function(canvas, context, gl) {
+  var render = function(canvas, gl) {
 
     var w = canvas.width;
     var h = canvas.height;
@@ -217,11 +221,12 @@ $(function() {
 
     if (triangle) {
       
-      var stride = 24;
+      var stride = 36;
       
       gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
-      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, stride, 0);
-      gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, 3, gl.FLOAT, false, stride, 12);
+      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, stride,  0);
+      gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute,   3, gl.FLOAT, false, stride, 12);
+      gl.vertexAttribPointer(shaderProgram.vertexColorAttribute,    3, gl.FLOAT, false, stride, 24);
       
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangle.index_buffer);
 
@@ -231,7 +236,7 @@ $(function() {
   }
 
   var update = function(dt) {
-    render(game, context, gl);
+    render(game, gl);
     mouse_x = 0;
     mouse_y = 0;
     window.webkitRequestAnimationFrame(update, game);

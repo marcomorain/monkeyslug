@@ -13,20 +13,24 @@
     <script id="shader-fs" type="x-shader/x-fragment">
         precision mediump float;
         varying vec3 vLighting;
-
+        varying vec3 vColor;
+        
         void main(void) {
-            gl_FragColor = vec4(vLighting, 1);
+            //gl_FragColor = vec4(vLighting, 1);
+            gl_FragColor = vec4(vColor, 1);
         }
     </script>
     <script id="shader-vs" type="x-shader/x-vertex">
         attribute vec3 aVertexPosition;
         attribute vec3 aVertexNormal;
+        attribute vec3 aVertexColor;
 
         uniform mat4 uMVMatrix;
         uniform mat4 uPMatrix;
         uniform mat4 uNormalMatrix;
 
         varying vec3 vLighting;
+        varying vec3 vColor;
 
         void main(void) {
             gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
@@ -41,6 +45,7 @@
 
             float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
             vLighting = ambientLight + (directionalLightColor * directional * vec3(0.3, 0.3, 0.3));
+            vColor    = aVertexColor;
         }
     </script>
     

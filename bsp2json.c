@@ -5,8 +5,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
-
-
+#include <sys/param.h>
+#include <float.h>
 #include "utils.c"
 
 FILE* create_output_file(const char* base, const char* description)
@@ -175,6 +175,8 @@ static node_t*      nodes           = NULL;
 static int          num_nodes       = 0;
 static model_t*     models          = NULL;
 static int          num_models      = 0;
+static uint8_t*     lightmaps       = NULL;
+static int          num_lightmaps   = 0;
 
 static edge_t* get_edge(int index)
 {
@@ -190,6 +192,20 @@ static face_t* get_face(int index)
     return _faces + index;
 }
 
+void set_min(vertex_t* out, vertex_t* a, vertex_t* b)
+{
+    out->x = MIN(a->x, b->x);
+    out->y = MIN(a->y, b->y);
+    out->z = MIN(a->z, b->z);
+}
+
+void set_max(vertex_t* out, vertex_t* a, vertex_t* b)
+{
+    out->x = MAX(a->x, b->x);
+    out->y = MAX(a->y, b->y);
+    out->z = MAX(a->z, b->z);
+}
+
 static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE* indices_out)
 {
     //printf("Processing face %08x\n", face_id);
@@ -201,6 +217,34 @@ static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE*
     plane_t* plane = planes + face->plane_id;
     
     int last_face = 0; // to: recompute this
+    
+    int light = face->lightmap;
+    
+    float color = 0;
+    
+    //printf("light: %d\n", light);
+    
+    if (light > 0) color = (lightmaps[light] /* - face->baselight*/) / 255.0f;
+    
+    vertex_t minv, maxv;
+    minv.x = minv.y = minv.z = FLT_MAX;
+    maxv.x = maxv.y = maxv.z = FLT_MIN;
+    
+    for (int e=0; e<face->ledge_num; e++)
+    {
+        edge_t* edge = get_edge(abs(first_edge[e]));
+        set_max(&maxv, &maxv, &verts[edge->vertex0]);
+        set_max(&maxv, &maxv, &verts[edge->vertex1]);
+        set_min(&minv, &minv, &verts[edge->vertex0]);
+        set_min(&minv, &minv, &verts[edge->vertex1]);
+    }
+    
+    vertex_t extents;
+    extents.x = maxv.x - minv.x;
+    extents.y = maxv.y - minv.y;
+    extents.z = maxv.z - minv.z;
+    
+    printf("extents: %g %g %g\n", extents.x/16.0f, extents.y/16.0f, extents.z/16.0f);
 
     for (int e=0; e<face->ledge_num; e++)
     {
@@ -221,13 +265,16 @@ static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE*
         
         int last_vertex = (e == face->ledge_num - 1) && last_face;
 
-        fprintf(vertices_out, "%g, %g, %g, %g, %g, %g%c \n",
+        fprintf(vertices_out, "%g, %g, %g, %g, %g, %g, %g, %g, %g%c \n",
             verts[v0].x,
             verts[v0].y,
             verts[v0].z,
             plane->normal.x,
             plane->normal.y,
             plane->normal.z,
+            color,
+            color,
+            color,
             last_vertex ? ' ' : ',');
 
     }
@@ -299,11 +346,8 @@ static void nodes_to_json(FILE* vertices_out, FILE* indices_out)
 }
 
 
-
-
-
-
-static void entities_to_json(const char* data)
+/*
+static void entities_to_json(const char* data, int size)
 {
 
     enum
@@ -312,7 +356,8 @@ static void entities_to_json(const char* data)
         IN_ENTITY,      // " => IN_SEP
         IN_SEP,         // " => IN KEY
         IN_KEY,         // " => IN VALUE
-        IN_VALUE,       // " => IN_ENTITY
+        IN_VALUE,       // " => IN_ENTITY_REST
+        IN_ENTITY_REST  // } => PARSE_START
     };
     
     char key[1012];
@@ -320,19 +365,37 @@ static void entities_to_json(const char* data)
     
     int state = PARSE_START;
     
-    for (char c = *data; c != '{'; c = *(data++)) {
-        
-    }
-    
-    switch(c)
+    for (int i=0; i<size; i++)
     {
-        case ' ':
-        case '\n':
-        case '\r':
-        case '\t':
+        char c = data[i];
+        putc(c);
+
+        switch (state)
+        {
+            case PARSE_START:
+            {
+                if (data[i] == '{')
+                {
+                    state = IN_ENTITY;
+                }
+                break;
+            }
+            
+            case IN_ENTITY:
+            {
+                if (data[i] 
+            }
+            case IN_SEP:
+            case IN_KEY:
+            case IN_VALUE:
+            case IN_ENTITY_REST:
+            break;
+        }
+       
     }
 }
 
+*/
 static void to_json(const char* file)
 {
     char* data = read_entire_file(file);
@@ -364,11 +427,15 @@ static void to_json(const char* file)
     // Bug here? wrong size of miptex struct?
     num_miptextures = header->miptex.size / sizeof(miptex_t);
     miptextures = (miptex_t*)data + header->miptex.offset;
+    
+    
+    num_lightmaps = header->lightmaps.size / sizeof(uint8_t);
+    lightmaps = (uint8_t*)data + header->lightmaps.offset;
 
 
 	for (int i=0; i<header->entities.size; i++)
 	{
-		fputc(data[header->entities.offset + i], stdout);
+		//fputc(data[header->entities.offset + i], stdout);
 	}
 	
 	puts("");
