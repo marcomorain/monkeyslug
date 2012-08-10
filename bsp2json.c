@@ -159,6 +159,15 @@ typedef struct
     int face_num;               // number of Faces
 } model_t;
 
+
+typedef struct
+{
+    int first_vertex;
+    int first_index;
+    FILE* vertices_out;
+    FILE* indices_out;
+}  traversal_t;
+
 static float*       vertices        = NULL;
 static int          num_vertices    = 0;
 static face_t*      _faces          = NULL;
@@ -206,7 +215,7 @@ void set_max(vertex_t* out, vertex_t* a, vertex_t* b)
     out->z = MAX(a->z, b->z);
 }
 
-static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE* indices_out)
+static void face_to_json(int face_id, int* index_base, traversal_t* traversal)
 {
     //printf("Processing face %08x\n", face_id);
 
@@ -215,8 +224,6 @@ static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE*
     int32_t* first_edge = list_edges +  face->ledge_id;
     
     plane_t* plane = planes + face->plane_id;
-    
-    int last_face = 0; // to: recompute this
     
     int light = face->lightmap;
     
@@ -244,10 +251,14 @@ static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE*
     extents.y = maxv.y - minv.y;
     extents.z = maxv.z - minv.z;
     
-    printf("extents: %g %g %g\n", extents.x/16.0f, extents.y/16.0f, extents.z/16.0f);
+    //printf("extents: %g %g %g\n", extents.x/16.0f, extents.y/16.0f, extents.z/16.0f);
+    
+    int first = 1;
 
     for (int e=0; e<face->ledge_num; e++)
     {
+        if (!traversal->first_vertex) fprintf(traversal->vertices_out, ",\n");
+        traversal->first_vertex = 0;
         int32_t edge_index = first_edge[e];
         int v0, v1;
         if (edge_index > 0)
@@ -262,10 +273,8 @@ static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE*
             v0 = edge->vertex1;
             v1 = edge->vertex0;
         }
-        
-        int last_vertex = (e == face->ledge_num - 1) && last_face;
 
-        fprintf(vertices_out, "%g, %g, %g, %g, %g, %g, %g, %g, %g%c \n",
+        fprintf(traversal->vertices_out, "%g, %g, %g, %g, %g, %g, %g, %g, %g",
             verts[v0].x,
             verts[v0].y,
             verts[v0].z,
@@ -274,37 +283,37 @@ static void face_to_json(int face_id, int* index_base, FILE* vertices_out, FILE*
             plane->normal.z,
             color,
             color,
-            color,
-            last_vertex ? ' ' : ',');
+            color);
 
     }
     
     int base = *index_base;
     
+    first = 1;
     for (int f=1; f < face->ledge_num - 1; f++)
     {
-        int last_index = (f == face->ledge_num - 2) && last_face;
-        fprintf(indices_out, "%d, %d, %d%c \n",
+        if (!traversal->first_index) fprintf(traversal->indices_out, ",\n");
+        traversal->first_index = 0;
+        fprintf(traversal->indices_out, "%d, %d, %d",
             base,
             base + f,
-            base + f + 1,
-            last_index ? ' ' : ',');
+            base + f + 1);
     }
     (*index_base) = base + face->ledge_num;
     
 }
 
-static void node_to_json(int node_id, int* index_base, FILE* vertices_out, FILE* indices_out);
+static void node_to_json(int node_id, int* index_base, traversal_t* traversal);
 
-static void node_leaf_index_to_json(int index, int* index_base, FILE* vertices_out, FILE* indices_out)
+static void node_leaf_index_to_json(int index, int* index_base, traversal_t* traversal)
 {
     const static unsigned leaf_mask = 0x8000;
     if (index & leaf_mask) return;
     if (index == 0) return;
-    node_to_json(index, index_base, vertices_out, indices_out);
+    node_to_json(index, index_base, traversal);
 }
 
-static void node_to_json(int node_id, int* index_base, FILE* vertices_out, FILE* indices_out)
+static void node_to_json(int node_id, int* index_base, traversal_t* traversal)
 {
     //printf("Processing node %d\n", node_id);
     
@@ -313,22 +322,22 @@ static void node_to_json(int node_id, int* index_base, FILE* vertices_out, FILE*
     //printf("Node: plane %08x faces: %d first: %08x front %08x back %08x\n",
     //node->plane_id, node->face_num, node->face_id, node->front, node->back);
 
-    node_leaf_index_to_json(node->front, index_base, vertices_out, indices_out);
+    node_leaf_index_to_json(node->front, index_base, traversal);
 
     for (int i = 0; i< node->face_num; i++)
     {
-        face_to_json(node->face_id + i, index_base, vertices_out, indices_out);
+        face_to_json(node->face_id + i, index_base, traversal);
     }
 
-    node_leaf_index_to_json(node->back, index_base, vertices_out, indices_out);
+    node_leaf_index_to_json(node->back, index_base, traversal);
 }
 
-static void nodes_to_json(FILE* vertices_out, FILE* indices_out)
+static void nodes_to_json(traversal_t* traversal)
 {
     printf("Num faces: %d\n", _num_faces);
 
-    fprintf(vertices_out, "{ \"vertices\" : [ ");
-    fprintf(indices_out,  "{ \"indices\"  : [ ");
+    fprintf(traversal->vertices_out, "{ \"vertices\" : [ ");
+    fprintf(traversal->indices_out,  "{ \"indices\"  : [ ");
     
     int index_base = 0;
     
@@ -339,10 +348,10 @@ static void nodes_to_json(FILE* vertices_out, FILE* indices_out)
     
     int bsp_root = models[0].node_id0;
 
-    node_to_json(bsp_root, &index_base, vertices_out, indices_out);
+    node_to_json(bsp_root, &index_base, traversal);
   
-    fprintf(vertices_out, "] }\n");
-    fprintf(indices_out,  "] }\n");    
+    fprintf(traversal->vertices_out, "] }\n");
+    fprintf(traversal->indices_out,  "] }\n");    
 }
 
 
@@ -397,7 +406,6 @@ static void entities_to_json(const char* data)
 }
 */
 
-*/
 static void to_json(const char* file)
 {
     char* data = read_entire_file(file);
@@ -442,11 +450,14 @@ static void to_json(const char* file)
 	
 	puts("");
 
-    FILE* vertices_out = create_output_file(file, "vertices");
-    FILE* indices_out  = create_output_file(file, "indices");
-    nodes_to_json(vertices_out, indices_out);
-    fclose(vertices_out);
-    fclose(indices_out);
+    traversal_t traversal;
+    traversal.first_index  = 1;
+    traversal.first_vertex = 1;
+    traversal.vertices_out = create_output_file(file, "vertices");
+    traversal.indices_out  = create_output_file(file, "indices");
+    nodes_to_json(&traversal);
+    fclose(traversal.vertices_out);
+    fclose(traversal.indices_out);
 
     //textures_to_json();
 

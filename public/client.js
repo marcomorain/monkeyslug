@@ -221,18 +221,11 @@ $(function() {
     setMatrixUniforms(gl);
 
     if (triangle) {
-      
-<<<<<<< Updated upstream
-      var stride = 36;
-      
-      gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
-      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, stride,  0);
-=======
+
       var stride = (4 * 3 * 3);
       
       gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
       gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, stride, 0);
->>>>>>> Stashed changes
       gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute,   3, gl.FLOAT, false, stride, 12);
       gl.vertexAttribPointer(shaderProgram.vertexColorAttribute,    3, gl.FLOAT, false, stride, 24);
       
