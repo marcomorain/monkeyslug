@@ -346,8 +346,9 @@ static void nodes_to_json(FILE* vertices_out, FILE* indices_out)
 }
 
 
+
 /*
-static void entities_to_json(const char* data, int size)
+static void entities_to_json(const char* data)
 {
 
     enum
@@ -394,6 +395,7 @@ static void entities_to_json(const char* data, int size)
        
     }
 }
+*/
 
 */
 static void to_json(const char* file)

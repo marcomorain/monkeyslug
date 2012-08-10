@@ -12,8 +12,6 @@ $(function() {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,  new Uint16Array(indices),   gl.STATIC_DRAW);
     
     self.num_elements = indices.length;
-    
-    //console.log(self);
   }
       
   function getShader(gl, id) {
@@ -56,7 +54,10 @@ $(function() {
 
       program.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
       gl.enableVertexAttribArray(program.vertexPositionAttribute);
-      
+
+      program.vertexColorAttribute = gl.getAttribLocation(program, 'aVertexColor');
+      gl.enableVertexAttribArray(program.vertexColorAttribute);
+            
       program.vertexNormalAttribute = gl.getAttribLocation(program, 'aVertexNormal');
       gl.enableVertexAttribArray(program.vertexNormalAttribute);
       
@@ -72,8 +73,8 @@ $(function() {
   
   var init_webgl = function(canvas) {
     var gl = canvas.getContext("experimental-webgl");
-    if (!gl) console.log('Could not initialise WebGL');
-    gl.clearColor(0.2, 0.2, 0.2, 1.0);
+    if (!gl) console.log('Could not initialise WebGL');    
+    gl.clearColor(0.7, 0.7, 0.9, 1);
     gl.enable(gl.DEPTH_TEST);
     gl.cullFace(gl.FRONT);
     gl.enable(gl.CULL_FACE)
@@ -221,10 +222,17 @@ $(function() {
 
     if (triangle) {
       
+<<<<<<< Updated upstream
       var stride = 36;
       
       gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
       gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, stride,  0);
+=======
+      var stride = (4 * 3 * 3);
+      
+      gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
+      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, stride, 0);
+>>>>>>> Stashed changes
       gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute,   3, gl.FLOAT, false, stride, 12);
       gl.vertexAttribPointer(shaderProgram.vertexColorAttribute,    3, gl.FLOAT, false, stride, 24);
       

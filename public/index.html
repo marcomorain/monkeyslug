@@ -12,11 +12,9 @@
     
     <script id="shader-fs" type="x-shader/x-fragment">
         precision mediump float;
-        varying vec3 vLighting;
         varying vec3 vColor;
-        
+
         void main(void) {
-            //gl_FragColor = vec4(vLighting, 1);
             gl_FragColor = vec4(vColor, 1);
         }
     </script>
@@ -46,6 +44,7 @@
             float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
             vLighting = ambientLight + (directionalLightColor * directional * vec3(0.3, 0.3, 0.3));
             vColor    = aVertexColor;
+
         }
     </script>
     
