@@ -177,6 +177,7 @@ typedef struct
     int first_index;
     FILE* vertices_out;
     FILE* indices_out;
+    FILE* entities_out;
 }  traversal_t;
 
 static float*       vertices        = NULL;
@@ -197,8 +198,10 @@ static model_t*     models          = NULL;
 static int          num_models      = 0;
 static uint8_t*     lightmaps       = NULL;
 static int          num_lightmaps   = 0;
-static texinfo_t*   _texinfos        = NULL;
-static int          _num_texinfos    = 0;
+static texinfo_t*   _texinfos       = NULL;
+static int          _num_texinfos   = 0;
+static char*        entities        = NULL;
+static int          num_entities    = 0;
 
 static edge_t* get_edge(int index)
 {
@@ -216,10 +219,10 @@ static face_t* get_face(int index)
 
 static texinfo_t* get_texinfo(int index)
 {
-    printf("Get texture [%ld] %d of %d\n", sizeof(texinfo_t), index, _num_texinfos);
+    //printf("Get texture [%ld] %d of %d\n", sizeof(texinfo_t), index, _num_texinfos);
     if (index >= _num_texinfos) fatal("Invalid texinfo index %d\n", index);
     if (index < 0) fatal("negative texinfo index %d", index);
-    return _texinfos + index;
+    return &_texinfos[index];
 }
 void set_min(vertex_t* out, vertex_t* a, vertex_t* b)
 {
@@ -245,10 +248,12 @@ float dotproduct(vertex_t a, vertex_t b)
     return result;
 }
 
+/*
 static void print_vertex(vertex_t v)
 {
     printf("(%g %g %g)\n", v.x, v.y, v.z);
 }
+
 static void print_texture(texinfo_t* t)
 {
     printf("%p\n", t);
@@ -258,6 +263,7 @@ static void print_texture(texinfo_t* t)
     printf("s: %g", t->distT);
     printf("tex: %d anim: %d", t->texture_id, t->animated);
 }
+*/
 
 static void face_to_json(int face_id, int* index_base, traversal_t* traversal)
 {
@@ -295,11 +301,11 @@ static void face_to_json(int face_id, int* index_base, traversal_t* traversal)
     extents.y = maxv.y - minv.y;
     extents.z = maxv.z - minv.z;
     
-    printf("extents: %g %g %g\n", extents.x/16.0f, extents.y/16.0f, extents.z/16.0f);
+    //printf("extents: %g %g %g\n", extents.x/16.0f, extents.y/16.0f, extents.z/16.0f);
     
     texinfo_t* texture = get_texinfo(face->texinfo_id);
     
-    print_texture(texture);
+    //print_texture(texture);
     
     for (int e=0; e<face->ledge_num; e++)
     {
@@ -383,9 +389,11 @@ static void node_to_json(int node_id, int* index_base, traversal_t* traversal)
 }
 
 static void nodes_to_json(traversal_t* traversal)
-{
+{   
     printf("Num faces: %d\n", _num_faces);
-
+        
+    fwrite(entities, 1, num_entities, traversal->entities_out);
+    
     fprintf(traversal->vertices_out, "{ \"vertices\" : [ ");
     fprintf(traversal->indices_out,  "{ \"indices\"  : [ ");
     
@@ -403,58 +411,6 @@ static void nodes_to_json(traversal_t* traversal)
     fprintf(traversal->vertices_out, "] }\n");
     fprintf(traversal->indices_out,  "] }\n");    
 }
-
-
-
-/*
-static void entities_to_json(const char* data)
-{
-
-    enum
-    {
-        PARSE_START,    // } => IN_ENTITY
-        IN_ENTITY,      // " => IN_SEP
-        IN_SEP,         // " => IN KEY
-        IN_KEY,         // " => IN VALUE
-        IN_VALUE,       // " => IN_ENTITY_REST
-        IN_ENTITY_REST  // } => PARSE_START
-    };
-    
-    char key[1012];
-    char value[1024];
-    
-    int state = PARSE_START;
-    
-    for (int i=0; i<size; i++)
-    {
-        char c = data[i];
-        putc(c);
-
-        switch (state)
-        {
-            case PARSE_START:
-            {
-                if (data[i] == '{')
-                {
-                    state = IN_ENTITY;
-                }
-                break;
-            }
-            
-            case IN_ENTITY:
-            {
-                if (data[i] 
-            }
-            case IN_SEP:
-            case IN_KEY:
-            case IN_VALUE:
-            case IN_ENTITY_REST:
-            break;
-        }
-       
-    }
-}
-*/
 
 static void to_json(const char* file)
 {
@@ -486,28 +442,25 @@ static void to_json(const char* file)
     
     // Bug here? wrong size of miptex struct?
     num_miptextures = header->miptex.size / sizeof(miptex_t);
-    miptextures = (miptex_t*)data + header->miptex.offset;
+    miptextures = (miptex_t*)(data + header->miptex.offset);
     
     _num_texinfos = header->texinfo.size / sizeof(texinfo_t);
-    _texinfos = (texinfo_t*)data + header->texinfo.offset;
+    _texinfos = (texinfo_t*)(data + header->texinfo.offset);
     
     num_lightmaps = header->lightmaps.size / sizeof(uint8_t);
-    lightmaps = (uint8_t*)data + header->lightmaps.offset;
-
-
-	for (int i=0; i<header->entities.size; i++)
-	{
-		//fputc(data[header->entities.offset + i], stdout);
-	}
-	
-	puts("");
-
+    lightmaps = (uint8_t*)(data + header->lightmaps.offset);
+    
+    num_entities = header->entities.size / sizeof(char);
+    entities = (char*)(data + header->entities.offset);
+    
     traversal_t traversal;
     traversal.first_index  = 1;
     traversal.first_vertex = 1;
     traversal.vertices_out = create_output_file(file, "vertices");
     traversal.indices_out  = create_output_file(file, "indices");
+    traversal.entities_out = create_output_file(file, "entities");
     nodes_to_json(&traversal);
+    fclose(traversal.entities_out);
     fclose(traversal.vertices_out);
     fclose(traversal.indices_out);
 

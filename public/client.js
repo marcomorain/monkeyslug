@@ -222,7 +222,7 @@ $(function() {
 
     if (triangle) {
 
-      var stride = (4 * 3 * 3);
+      var stride = (3 * 4 * 4);
       
       gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
       gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, stride, 0);
