@@ -1,3 +1,6 @@
+body {
+  padding-top: 40px; }
+
 canvas {
   border-style: solid;
   border-width: 2px;

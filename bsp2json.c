@@ -56,13 +56,13 @@ typedef struct                 // The BSP file header
 
 typedef struct  
 {
-    uint16_t plane_id;  // The plane in which the face lies
+    int16_t plane_id;  // The plane in which the face lies
                         //           must be in [0,numplanes[ 
-    uint16_t side;      // 0 if in front of the plane, 1 if behind the plane
+    int16_t side;      // 0 if in front of the plane, 1 if behind the plane
     int ledge_id;       // first edge in the List of edges
                         //           must be in [0,numledges[
-    uint16_t ledge_num; // number of edges in the List of edges
-    uint16_t texinfo_id;// index of the Texture info the face is part of
+    int16_t ledge_num; // number of edges in the List of edges
+    int16_t texinfo_id;// index of the Texture info the face is part of
                         //           must be in [0,numtexinfos[ 
     uint8_t typelight;  // type of lighting, for the face
     uint8_t baselight;  // from 0xFF (dark) to 0 (bright)
@@ -162,6 +162,17 @@ typedef struct
 
 typedef struct
 {
+    vertex_t vectorS;       // S vector, horizontal in texture space)
+    float    distS;         // horizontal offset in texture space
+    vertex_t vectorT;       // T vector, vertical in texture space
+    float    distT;         // vertical offset in texture space
+    uint32_t   texture_id;    // Index of Mip Texture
+                            //           must be in [0,numtex[
+    uint32_t   animated;      // 0 for ordinary textures, 1 for water 
+} texinfo_t;
+
+typedef struct
+{
     int first_vertex;
     int first_index;
     FILE* vertices_out;
@@ -186,6 +197,8 @@ static model_t*     models          = NULL;
 static int          num_models      = 0;
 static uint8_t*     lightmaps       = NULL;
 static int          num_lightmaps   = 0;
+static texinfo_t*   _texinfos        = NULL;
+static int          _num_texinfos    = 0;
 
 static edge_t* get_edge(int index)
 {
@@ -201,6 +214,13 @@ static face_t* get_face(int index)
     return _faces + index;
 }
 
+static texinfo_t* get_texinfo(int index)
+{
+    printf("Get texture [%ld] %d of %d\n", sizeof(texinfo_t), index, _num_texinfos);
+    if (index >= _num_texinfos) fatal("Invalid texinfo index %d\n", index);
+    if (index < 0) fatal("negative texinfo index %d", index);
+    return _texinfos + index;
+}
 void set_min(vertex_t* out, vertex_t* a, vertex_t* b)
 {
     out->x = MIN(a->x, b->x);
@@ -213,6 +233,30 @@ void set_max(vertex_t* out, vertex_t* a, vertex_t* b)
     out->x = MAX(a->x, b->x);
     out->y = MAX(a->y, b->y);
     out->z = MAX(a->z, b->z);
+}
+
+
+float dotproduct(vertex_t a, vertex_t b)
+{
+    float result = 0;
+    result += a.x * b.x;
+    result += a.y * b.y;
+    result += a.z * b.z;
+    return result;
+}
+
+static void print_vertex(vertex_t v)
+{
+    printf("(%g %g %g)\n", v.x, v.y, v.z);
+}
+static void print_texture(texinfo_t* t)
+{
+    printf("%p\n", t);
+    print_vertex(t->vectorS);
+    printf("s: %g", t->distS);
+    print_vertex(t->vectorT);
+    printf("s: %g", t->distT);
+    printf("tex: %d anim: %d", t->texture_id, t->animated);
 }
 
 static void face_to_json(int face_id, int* index_base, traversal_t* traversal)
@@ -251,10 +295,12 @@ static void face_to_json(int face_id, int* index_base, traversal_t* traversal)
     extents.y = maxv.y - minv.y;
     extents.z = maxv.z - minv.z;
     
-    //printf("extents: %g %g %g\n", extents.x/16.0f, extents.y/16.0f, extents.z/16.0f);
+    printf("extents: %g %g %g\n", extents.x/16.0f, extents.y/16.0f, extents.z/16.0f);
     
-    int first = 1;
-
+    texinfo_t* texture = get_texinfo(face->texinfo_id);
+    
+    print_texture(texture);
+    
     for (int e=0; e<face->ledge_num; e++)
     {
         if (!traversal->first_vertex) fprintf(traversal->vertices_out, ",\n");
@@ -273,8 +319,11 @@ static void face_to_json(int face_id, int* index_base, traversal_t* traversal)
             v0 = edge->vertex1;
             v1 = edge->vertex0;
         }
+        
+        float s = dotproduct(verts[v0], texture->vectorS) + texture->distS;    
+        float t = dotproduct(verts[v0], texture->vectorT) + texture->distT;
 
-        fprintf(traversal->vertices_out, "%g, %g, %g, %g, %g, %g, %g, %g, %g",
+        fprintf(traversal->vertices_out, "%g, %g, %g, %g, %g, %g, %g, %g, %g, %g, %g, 1",
             verts[v0].x,
             verts[v0].y,
             verts[v0].z,
@@ -283,13 +332,14 @@ static void face_to_json(int face_id, int* index_base, traversal_t* traversal)
             plane->normal.z,
             color,
             color,
-            color);
+            color,
+            s,
+            t);
 
     }
     
     int base = *index_base;
     
-    first = 1;
     for (int f=1; f < face->ledge_num - 1; f++)
     {
         if (!traversal->first_index) fprintf(traversal->indices_out, ",\n");
@@ -438,6 +488,8 @@ static void to_json(const char* file)
     num_miptextures = header->miptex.size / sizeof(miptex_t);
     miptextures = (miptex_t*)data + header->miptex.offset;
     
+    _num_texinfos = header->texinfo.size / sizeof(texinfo_t);
+    _texinfos = (texinfo_t*)data + header->texinfo.offset;
     
     num_lightmaps = header->lightmaps.size / sizeof(uint8_t);
     lightmaps = (uint8_t*)data + header->lightmaps.offset;

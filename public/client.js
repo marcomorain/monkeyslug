@@ -237,10 +237,10 @@ $(function() {
   }
 
   var update = function(dt) {
+    window.webkitRequestAnimationFrame(update, game);
     render(game, gl);
     mouse_x = 0;
     mouse_y = 0;
-    window.webkitRequestAnimationFrame(update, game);
   };
   
   var original_width  = game.width;
