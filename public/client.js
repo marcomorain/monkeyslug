@@ -95,12 +95,29 @@ $(function() {
   var map = 'e1m1';
   map = 'start';
   
-  $.getJSON(map + '.bsp.vertices.json', function(vertices) {
-    $.getJSON(map + '.bsp.indices.json', function(indices) {
-      triangle = new Buffer(gl, vertices.vertices, indices.indices);
-    });
-  }).error(function(e) { console.log(e); console.log("error"); })
+  var lights = [];
   
+  $.when( $.getJSON(map + '.bsp.vertices.json'),
+          $.getJSON(map + '.bsp.indices.json'),
+          $.getJSON(map + '.bsp.entities.json')
+          ).done(function(vertices, indices, entities){
+            
+      _.each(_.filter(entities[0], function(entity){
+        return (entity.classname === 'light')
+      }), function(light, i){
+        
+        if (i<3) console.log(light);
+        light.light = parseFloat(light.light || '200');
+        light.origin = vec3.create(_.map(light.origin.split(' '), parseFloat));
+        lights.push(light);
+      });
+      
+      //console.log(lights);
+         
+      triangle = new Buffer(gl, vertices[0].vertices, indices[0].indices);    
+  }).fail(function(){
+    console.log("JSON download error");
+  });
   
 
   var mvMatrix      = mat4.create();
@@ -238,6 +255,11 @@ $(function() {
 
   var update = function(dt) {
     window.webkitRequestAnimationFrame(update, game);
+    
+    lights = _.sortBy(lights, function(light) {
+      return vec3.dist(this, light);
+    }, player);
+    
     render(game, gl);
     mouse_x = 0;
     mouse_y = 0;

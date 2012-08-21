@@ -14,6 +14,7 @@ while len(input) > 1:
     pass
   elif item == "}":
     entities.append(entity)
+    entity = {}
   else:
     tokens = item.split('"')
     entity[tokens[1]] = tokens[3]
