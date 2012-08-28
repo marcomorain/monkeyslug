@@ -1,5 +1,45 @@
 $(function() {
   "use strict";
+
+  var url = $.url();
+  var map = url.param('map') || 'start';
+
+  var mvMatrix      = mat4.create();
+  var pMatrix       = mat4.create();
+  var normalMatrix  = mat4.create();
+
+  
+  var mouse_x = 0;
+  var mouse_y = 0;
+
+  // Player position at origin
+  // E1M1
+  // "classname" "info_player_start"
+  // "origin" "480 -352 88"
+  // "angle" "90"
+  //var player = vec3.create([-480, 352, -88]);
+  var player = vec3.create([0, 0, 0]);
+  var yaw = -Math.PI/2;
+  var roll = 0;
+  var pitch = 0;
+    
+  var mouse_sensitivity = 0.01;
+  var fov = 45;
+  var near_clip = 4;
+  var far_clip = 4096;
+  var speed = 4;
+  
+  var pitch_min = -Math.PI/6;
+  var pitch_max =  Math.PI/6;
+  
+  var up    = 87;
+  var down  = 83;
+  var left  = 65;
+  var right = 68;
+  var jump  = 32;
+  var duck  = 67;
+  var keys  = {};
+  
   
   var Buffer = function(gl, vertices, indices) {
     var self = this;
@@ -89,26 +129,33 @@ $(function() {
   
   var shaderProgram = initShaders(gl);
   
-  
   var triangle = null;
   
-  var map = 'e1m1';
-  map = 'start';
-  
   var lights = [];
+  
+  var to_vertex = function(data) {
+    return  vec3.create(_.map(data.split(' '), parseFloat));
+  };
   
   $.when( $.getJSON(map + '.bsp.vertices.json'),
           $.getJSON(map + '.bsp.indices.json'),
           $.getJSON(map + '.bsp.entities.json')
           ).done(function(vertices, indices, entities){
             
+      var start = _.find(entities[0], function(e){
+        return e.classname == 'info_player_start';
+      });
+      
+      // Load the players start position from the map.
+      player = to_vertex(start.origin);
+      
       _.each(_.filter(entities[0], function(entity){
         return (entity.classname === 'light')
-      }), function(light, i){
+      }), function(light, i) {
         
         if (i<3) console.log(light);
         light.light = parseFloat(light.light || '200');
-        light.origin = vec3.create(_.map(light.origin.split(' '), parseFloat));
+        light.origin = to_vertex(light.origin);
         lights.push(light);
       });
       
@@ -119,49 +166,12 @@ $(function() {
     console.log("JSON download error");
   });
   
-
-  var mvMatrix      = mat4.create();
-  var pMatrix       = mat4.create();
-  var normalMatrix  = mat4.create();
-
   function setMatrixUniforms(gl) {
       gl.uniformMatrix4fv(shaderProgram.pMatrixUniform,  false, pMatrix);
       gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
       gl.uniformMatrix4fv(shaderProgram.normalMatrix,    false, normalMatrix);
   }
   
-  var mouse_x = 0;
-  var mouse_y = 0;
-
-  
-  
-
-  // Player position at origin
-  // E1M1
-  // "classname" "info_player_start"
-  // "origin" "480 -352 88"
-  // "angle" "90"
-  var player = vec3.create([-480, 352, -88]);
-  var yaw = -Math.PI/2;
-  var roll = 0;
-  var pitch = 0;
-    
-  var mouse_sensitivity = 0.01;
-  var fov = 45;
-  var near_clip = 4;
-  var far_clip = 4096;
-  var speed = 4;
-  
-  var pitch_min = -Math.PI/6;
-  var pitch_max =  Math.PI/6;
-  
-  var up    = 87;
-  var down  = 83;
-  var left  = 65;
-  var right = 68;
-  var jump  = 32;
-  var duck  = 67;
-  var keys  = {};
   
   
   var clamp = function(n, min, max) {
