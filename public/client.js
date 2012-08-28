@@ -222,8 +222,8 @@ $(function() {
     if (keys[up])
     {
       player = vec3.add(player, vec_walk);
-      _.each(_.first(lights, 4), function(light){
-        console.log(vec3.dist(light, player));
+      _.each(_.first(lights, 16), function(light){
+        console.log(vec3.dist(light.origin, player));
         
       });
       
@@ -281,7 +281,7 @@ $(function() {
     window.webkitRequestAnimationFrame(update, game);
     
     lights = _.sortBy(lights, function(light) {
-      return vec3.dist(this, light);
+      return vec3.dist(this, light.origin);
     }, player);
     
     render(game, gl);
