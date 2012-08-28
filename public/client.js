@@ -12,14 +12,10 @@ $(function() {
   var mouse_x = 0;
   var mouse_y = 0;
 
-  // Player position at origin
-  // E1M1
-  // "classname" "info_player_start"
-  // "origin" "480 -352 88"
-  // "angle" "90"
-  //var player = vec3.create([-480, 352, -88]);
+
+
   var player = vec3.create([0, 0, 0]);
-  var yaw = -Math.PI/2;
+  var yaw = 0;
   var roll = 0;
   var pitch = 0;
     
@@ -137,6 +133,10 @@ $(function() {
     return  vec3.create(_.map(data.split(' '), parseFloat));
   };
   
+  var to_angle = function(data) {
+    return parseFloat(data) * Math.PI / 180.0;
+  };
+  
   $.when( $.getJSON(map + '.bsp.vertices.json'),
           $.getJSON(map + '.bsp.indices.json'),
           $.getJSON(map + '.bsp.entities.json')
@@ -148,6 +148,15 @@ $(function() {
       
       // Load the players start position from the map.
       player = to_vertex(start.origin);
+      yaw = to_angle(start.angle);      
+      
+      // E1M1:
+      // "origin" "480 -352 88"
+      // "angle" "90"
+      // hack to be: [-480, 352, -88]);
+      // Angle: -Math.PI/2;
+      player = vec3.multiply(player, [-1, -1, -1]);
+      yaw = -yaw;
       
       _.each(_.filter(entities[0], function(entity){
         return (entity.classname === 'light')
@@ -213,6 +222,11 @@ $(function() {
     if (keys[up])
     {
       player = vec3.add(player, vec_walk);
+      _.each(_.first(lights, 4), function(light){
+        console.log(vec3.dist(light, player));
+        
+      });
+      
     }
     
     if (keys[down])
