@@ -13,10 +13,21 @@
     
     <script id="shader-fs" type="x-shader/x-fragment">
         precision mediump float;
+        varying vec3 vLighting;
         varying vec3 vColor;
+        varying vec4 vTransformedNormal;
+        varying vec4 vPosition;
+        uniform vec3 uPointLightingLocation;
+        uniform vec3 uPointLightingColor;
+        uniform vec3 uAmbientColor;
 
         void main(void) {
-            gl_FragColor = vec4(vColor, 1);
+          
+            vec4 lightDirection = vec4(normalize(uPointLightingLocation - vPosition.xyz), 1);
+            float directionalLightWeighting = max(dot(normalize(vTransformedNormal), lightDirection), 0.0);
+            vec3 lightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
+            
+            gl_FragColor = vec4(lightWeighting, 1);
         }
     </script>
     <script id="shader-vs" type="x-shader/x-vertex">
@@ -27,24 +38,18 @@
         uniform mat4 uMVMatrix;
         uniform mat4 uPMatrix;
         uniform mat4 uNormalMatrix;
+        uniform vec3 uAmbientColor;
 
         varying vec3 vLighting;
         varying vec3 vColor;
+        varying vec4 vTransformedNormal;
+        varying vec4 vPosition;
 
         void main(void) {
-            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-            
-            // Apply lighting effect
-
-            vec3 ambientLight = vec3(0.6, 0.6, 0.6);
-            vec3 directionalLightColor = vec3(0.5, 0.5, 0.75);
-            vec3 directionalVector = vec3(0.85, 0.8, 0.75);
-
-            vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 0);
-
-            float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
-            vLighting = ambientLight + (directionalLightColor * directional * vec3(0.3, 0.3, 0.3));
-            vColor    = aVertexColor;
+            vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+            gl_Position = uPMatrix * vPosition;
+            vTransformedNormal = uNormalMatrix * vec4(aVertexNormal, 0);
+            vColor             = aVertexColor;
 
         }
     </script>

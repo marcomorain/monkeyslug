@@ -11,8 +11,8 @@ $(function() {
   
   var mouse_x = 0;
   var mouse_y = 0;
-
-
+  
+  var ambient_light = vec3.create([0.1, 0.1, 0.1]);
 
   var player = vec3.create([0, 0, 0]);
   var yaw = 0;
@@ -100,10 +100,13 @@ $(function() {
       program.vertexColorAttribute = gl.getAttribLocation(program, 'aVertexColor');
       gl.enableVertexAttribArray(program.vertexColorAttribute);
 
-      program.pMatrixUniform  = gl.getUniformLocation(program, 'uPMatrix');
-      program.mvMatrixUniform = gl.getUniformLocation(program, 'uMVMatrix');
-      program.normalMatrix = gl.getUniformLocation(program, 'uNormalMatrix');
-      
+      program.pMatrixUniform        = gl.getUniformLocation(program, 'uPMatrix');
+      program.mvMatrixUniform       = gl.getUniformLocation(program, 'uMVMatrix');
+      program.normalMatrix          = gl.getUniformLocation(program, 'uNormalMatrix');
+      program.ambientColor          = gl.getUniformLocation(program, 'uAmbientColor');
+      program.pointLightingLocation = gl.getUniformLocation(program, 'uPointLightingLocation');
+      program.pointLightingColor    = gl.getUniformLocation(program, 'uPointLightingColor');
+
       return program;
   }
   
@@ -179,6 +182,23 @@ $(function() {
       gl.uniformMatrix4fv(shaderProgram.pMatrixUniform,  false, pMatrix);
       gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
       gl.uniformMatrix4fv(shaderProgram.normalMatrix,    false, normalMatrix);
+      gl.uniform3fv(shaderProgram.ambientColor,           ambient_light);
+
+      
+      var closest_light_pos;
+      var closest_light_color;
+      
+      if (lights.length > 0){ 
+        var d = lights[0].light/500.0;
+        closest_light_pos   = lights[0].origin;
+        closest_light_color = vec3.create([d,d,d]);
+      } else {
+        closest_light_pos   = vec3.create([0,0,0]);
+        closest_light_color = vec3.create([0.3,0.3,0.3]);
+      }
+      gl.uniform3fv(shaderProgram.pointLightingLocation, closest_light_pos);
+      gl.uniform3fv(shaderProgram.pointLightingColor,    closest_light_color);
+      
   }
   
   
@@ -222,10 +242,13 @@ $(function() {
     if (keys[up])
     {
       player = vec3.add(player, vec_walk);
+      
+      /*
       _.each(_.first(lights, 16), function(light){
         console.log(vec3.dist(light.origin, player));
         
       });
+      */
       
     }
     
