@@ -196,6 +196,8 @@ $(function() {
         closest_light_pos   = vec3.create([0,0,0]);
         closest_light_color = vec3.create([0.3,0.3,0.3]);
       }
+      
+      closest_light_pos = player;
       gl.uniform3fv(shaderProgram.pointLightingLocation, closest_light_pos);
       gl.uniform3fv(shaderProgram.pointLightingColor,    closest_light_color);
       

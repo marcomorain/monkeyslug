@@ -11,25 +11,6 @@
     <script type="text/javascript" src="gl-matrix-min.js"></script>
     <script type="text/javascript" src="purl.js"></script>
     
-    <script id="shader-fs" type="x-shader/x-fragment">
-        precision mediump float;
-        varying vec3 vLighting;
-        varying vec3 vColor;
-        varying vec4 vTransformedNormal;
-        varying vec4 vPosition;
-        uniform vec3 uPointLightingLocation;
-        uniform vec3 uPointLightingColor;
-        uniform vec3 uAmbientColor;
-
-        void main(void) {
-          
-            vec4 lightDirection = vec4(normalize(uPointLightingLocation - vPosition.xyz), 1);
-            float directionalLightWeighting = max(dot(normalize(vTransformedNormal), lightDirection), 0.0);
-            vec3 lightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
-            
-            gl_FragColor = vec4(lightWeighting, 1);
-        }
-    </script>
     <script id="shader-vs" type="x-shader/x-vertex">
         attribute vec3 aVertexPosition;
         attribute vec3 aVertexNormal;
@@ -48,9 +29,29 @@
         void main(void) {
             vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
             gl_Position = uPMatrix * vPosition;
-            vTransformedNormal = uNormalMatrix * vec4(aVertexNormal, 0);
+            vTransformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
             vColor             = aVertexColor;
 
+        }
+    </script>
+    
+    <script id="shader-fs" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec3 vLighting;
+        varying vec3 vColor;
+        varying vec4 vTransformedNormal;
+        varying vec4 vPosition;
+        uniform vec3 uPointLightingLocation;
+        uniform vec3 uPointLightingColor;
+        uniform vec3 uAmbientColor;
+
+        void main(void) {
+          
+            vec4 lightDirection = vec4(normalize(uPointLightingLocation - vPosition.xyz), 1);
+            float directionalLightWeighting = max(dot(normalize(vTransformedNormal), lightDirection), 0.0);
+            vec3 lightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
+            
+            gl_FragColor = vec4(lightWeighting, 1);
         }
     </script>
     
