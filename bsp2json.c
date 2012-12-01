@@ -443,6 +443,13 @@ static void to_json(const char* file)
     // Bug here? wrong size of miptex struct?
     num_miptextures = header->miptex.size / sizeof(miptex_t);
     miptextures = (miptex_t*)(data + header->miptex.offset);
+
+    for (int i=0; i<num_miptextures; i++)
+    {
+        char name_data[17] = {};
+        strncpy(name_data, miptextures[i].name, 16);
+        printf("Texture: %s\n", name_data);
+    }
     
     _num_texinfos = header->texinfo.size / sizeof(texinfo_t);
     _texinfos = (texinfo_t*)(data + header->texinfo.offset);
