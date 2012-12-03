@@ -326,7 +326,7 @@ Json::Value object_to_json(const miptex_t& object)
     {
         name.push_back(object.name[i]);
     }
-    result["name"] = name;
+    //result["name"] = name;
     ASSIGN_FIELD(width);
     ASSIGN_FIELD(height);
     ASSIGN_FIELD(offset1);
