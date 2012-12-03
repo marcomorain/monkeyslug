@@ -7,7 +7,6 @@ $(function() {
   var mvMatrix      = mat4.create();
   var pMatrix       = mat4.create();
   var normalMatrix  = mat4.create();
-
   
   var mouse_x = 0;
   var mouse_y = 0;
