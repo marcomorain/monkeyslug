@@ -283,27 +283,26 @@ static void to_json(const char* file)
     free(data);
 }
 
+#define FIELD_STR(s) FIELD_STR_(s)
+#define FIELD_STR_(s) #s
+#define ASSIGN_FIELD(field) result[FIELD_STR((field))] = object.field
+
 Json::Value object_to_json(const vertex_t& object)
 {
     Json::Value result;
-    result["x"] = object.x;
-    result["y"] = object.y;
-    result["z"] = object.z;
+    ASSIGN_FIELD(x);
+    ASSIGN_FIELD(y);
+    ASSIGN_FIELD(z);
     return result;
 }
 
 Json::Value object_to_json(const edge_t object)
 {
     Json::Value result;
-    result["vertex0"] = object.vertex0;
-    result["vertex1"] = object.vertex1;
+    ASSIGN_FIELD(vertex0);
+    ASSIGN_FIELD(vertex1);
     return result;
 }
-
-#define FIELD_STR(s) FIELD_STR_(s)
-#define FIELD_STR_(s) #s
-
-#define ASSIGN_FIELD(field) result[FIELD_STR((field))] = object.field
 
     int16_t plane_id;  // The plane in which the face lies
     //           must be in [0,numplanes[
@@ -323,6 +322,19 @@ Json::Value object_to_json(const face_t object)
     Json::Value result;
     ASSIGN_FIELD(plane_id);
     ASSIGN_FIELD(side);
+    ASSIGN_FIELD(ledge_id);
+    ASSIGN_FIELD(ledge_num);
+    ASSIGN_FIELD(texinfo_id);
+    ASSIGN_FIELD(typelight);
+    ASSIGN_FIELD(baselight);
+    
+    Json::Value lights(Json::arrayValue);
+    lights.append(object.light[0]);
+    lights.append(object.light[1]);
+    result["lights"] = lights;
+
+    ASSIGN_FIELD(lightmap);
+
     return result;
 }
 
