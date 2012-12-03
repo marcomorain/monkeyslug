@@ -4,3 +4,5 @@ output
 public/.sass-cache/
 xcuserdata
 .DS_Store
+
+/bsp2json/build/

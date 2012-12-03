@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <float.h>
+#include <string>
 #include <cassert>
 #include "json/json.h"
 
@@ -37,22 +37,6 @@ static char* read_entire_file(const char* filename)
     return data;
 }
 
-<<<<<<< HEAD
-=======
-
-
-FILE* create_output_file(const char* base, const char* description)
-{
-    char* filename;
-    int error = asprintf(&filename, "%s.%s.json", base, description);
-    if (error < 0) fatal("Unable to compute output filename");
-    puts(filename);
-    FILE* result = fopen(filename, "w");
-    if(!result) fatal("Error opening %s", filename);
-    return result;
-}
-
->>>>>>> 25083b3ed21f9b0c0f0168ddab413e0fbad057e2
 typedef struct                 // A Directory entry
 {
     int  offset;                // Offset to entry, in bytes, from start of file
@@ -204,11 +188,159 @@ typedef struct
     uint32_t   animated;      // 0 for ordinary textures, 1 for water
 } texinfo_t;
 
-<<<<<<< HEAD
+
+#define FIELD_STR(s) FIELD_STR_(s)
+#define FIELD_STR_(s) #s
+#define ASSIGN_FIELD(field) result[FIELD_STR(field)] = object.field
+
+Json::Value object_to_json(uint16_t object)
+{
+    Json::Value result = object;
+    return result;
+}
+
+Json::Value object_to_json(const bboxshort_t& object)
+{
+    Json::Value result;
+    
+    Json::Value minArray(Json::arrayValue);
+    Json::Value maxArray(Json::arrayValue);
+    for (int i=0; i<3; i++)
+    {
+        minArray.append(object.min[i]);
+        maxArray.append(object.max[i]);
+    }
+    result["max"] = maxArray;
+    result["min"] = minArray;
+    return result;
+}
+
+Json::Value object_to_json(const vertex_t& object)
+{
+    Json::Value result(Json::arrayValue);
+    result.append(object.x);
+    result.append(object.y);
+    result.append(object.z);
+    return result;
+}
+
+Json::Value object_to_json(const boundbox_t& object)
+{
+    Json::Value result;
+    result["min"] = object_to_json(object.min);
+    result["max"] = object_to_json(object.max);
+    return result;
+}
+
+Json::Value object_to_json(const plane_t& object)
+{
+    Json::Value result;
+    ASSIGN_FIELD(dist);
+    ASSIGN_FIELD(type);
+    result["normal"] = object_to_json(object.normal);
+    return result;
+}
+
+Json::Value object_to_json(const texinfo_t& object)
+{
+    Json::Value result;
+    ASSIGN_FIELD(animated);
+    ASSIGN_FIELD(distS);
+    ASSIGN_FIELD(distT);
+    ASSIGN_FIELD(texture_id);
+    result["vectorS"] = object_to_json(object.vectorS);
+    result["vectorT"] = object_to_json(object.vectorT);
+    return result;
+}
+
+Json::Value object_to_json(const edge_t& object)
+{
+    Json::Value result(Json::arrayValue);
+    result.append(object.vertex0);
+    result.append(object.vertex1);
+    return result;
+}
+
+Json::Value object_to_json(const model_t& object)
+{
+    Json::Value result;
+    result["bound"] = object_to_json(object.bound);
+    ASSIGN_FIELD(face_id);
+    ASSIGN_FIELD(face_num);
+    ASSIGN_FIELD(node_id0);
+    ASSIGN_FIELD(node_id1);
+    ASSIGN_FIELD(node_id2);
+    ASSIGN_FIELD(node_id3);
+    ASSIGN_FIELD(numleafs);
+    result["origin"] = object_to_json(object.origin);
+    return result;
+}
+
+Json::Value object_to_json(const face_t& object)
+{
+    Json::Value result;
+    ASSIGN_FIELD(plane_id);
+    ASSIGN_FIELD(side);
+    ASSIGN_FIELD(ledge_id);
+    ASSIGN_FIELD(ledge_num);
+    ASSIGN_FIELD(texinfo_id);
+    ASSIGN_FIELD(typelight);
+    ASSIGN_FIELD(baselight);
+    
+    Json::Value lights(Json::arrayValue);
+    lights.append(object.light[0]);
+    lights.append(object.light[1]);
+    result["lights"] = lights;
+    
+    ASSIGN_FIELD(lightmap);
+    
+    return result;
+}
+
+Json::Value object_to_json(const node_t& object)
+{
+    Json::Value result;
+    ASSIGN_FIELD(back);
+    result["box"] = object_to_json(object.box);
+    ASSIGN_FIELD(face_id);
+    ASSIGN_FIELD(face_num);
+    ASSIGN_FIELD(front);
+    ASSIGN_FIELD(plane_id);
+    return result;
+}
+
+ char   name[16];             // Name of the texture.
+    uint32_t width;                // width of picture, must be a multiple of 8
+    uint32_t height;               // height of picture, must be a multiple of 8
+    uint32_t offset1;              // offset to u_char Pix[width   * height]
+    uint32_t offset2;              // offset to u_char Pix[width/2 * height/2]
+    uint32_t offset4;              // offset to u_char Pix[width/4 * height/4]
+    uint32_t offset8;              // offset to u_char Pix[width/8 * height/8]
+
+Json::Value object_to_json(const miptex_t& object)
+{
+    Json::Value result;
+    
+    std::string name;
+    for (int i=0; i<16; i++)
+    {
+        name.push_back(object.name[i]);
+    }
+    result["name"] = name;
+    ASSIGN_FIELD(width);
+    ASSIGN_FIELD(height);
+    ASSIGN_FIELD(offset1);
+    ASSIGN_FIELD(offset2);
+    ASSIGN_FIELD(offset4);
+    ASSIGN_FIELD(offset8);
+    return result;
+}
+
 template <typename Type> Json::Value object_to_json(const Type& object)
 {
     return Json::Value(Json::nullValue);
 }
+
 
 template <typename Type> class Array
 {
@@ -245,132 +377,13 @@ public:
         }
         return result;
     }
+    
+    std::string to_string(void)
+    {
+        return std::string(this->m_data, this->m_count);
+    }
 };
 
-
-=======
-static face_t*      _faces          = NULL;
-static int          _num_faces      = 0;
-static int32_t*     list_edges      = NULL;
-static int          num_list_edges  = 0;
-static plane_t*     planes          = NULL;
-static int          num_planes      = 0;
-static miptex_t*    miptextures     = NULL;
-static int          num_miptextures = 0;
-static node_t*      nodes           = NULL;
-static int          num_nodes       = 0;
-static model_t*     models          = NULL;
-static int          num_models      = 0;
-static uint8_t*     lightmaps       = NULL;
-static int          num_lightmaps   = 0;
-static texinfo_t*   _texinfos       = NULL;
-static int          _num_texinfos   = 0;
-static char*        entities        = NULL;
-static int          num_entities    = 0;
-
-static face_t* get_face(int index)
-{
-    if (index >= _num_faces) fatal("Invalid face index %d", index);
-    if (index < 0) fatal("Negative face index");
-    return _faces + index;
-}
-
-static texinfo_t* get_texinfo(int index)
-{
-    //printf("Get texture [%ld] %d of %d\n", sizeof(texinfo_t), index, _num_texinfos);
-    if (index >= _num_texinfos) fatal("Invalid texinfo index %d\n", index);
-    if (index < 0) fatal("negative texinfo index %d", index);
-    return &_texinfos[index];
-}
-void set_min(vertex_t* out, vertex_t* a, vertex_t* b)
-{
-    out->x = MIN(a->x, b->x);
-    out->y = MIN(a->y, b->y);
-    out->z = MIN(a->z, b->z);
-}
-
-void set_max(vertex_t* out, vertex_t* a, vertex_t* b)
-{
-    out->x = MAX(a->x, b->x);
-    out->y = MAX(a->y, b->y);
-    out->z = MAX(a->z, b->z);
-}
-
-
-float dotproduct(vertex_t a, vertex_t b)
-{
-    float result = 0;
-    result += a.x * b.x;
-    result += a.y * b.y;
-    result += a.z * b.z;
-    return result;
-}
-
-static void node_to_json(int node_id, int* index_base, Json::Value& json);
-
-static void node_leaf_index_to_json(int index, int* index_base, Json::Value& json)
-{
-    const static unsigned leaf_mask = 0x8000;
-    if (index & leaf_mask) return;
-    if (index == 0) return;
-    node_to_json(index, index_base, json);
-}
-
-static void node_to_json(int node_id, int* index_base, Json::Value& json)
-{
-    printf("Processing node %d\n", node_id);
-    
-    node_t* node = nodes + node_id;
-    
-    //printf("Node: plane %08x faces: %d first: %08x front %08x back %08x\n",
-    //node->plane_id, node->face_num, node->face_id, node->front, node->back);
-    
-    node_leaf_index_to_json(node->front, index_base, json);
-    
-    for (int i = 0; i< node->face_num; i++)
-    {
-        //face_to_json(node->face_id + i, index_base, json);
-    }
-    
-    node_leaf_index_to_json(node->back, index_base, json);
-}
-
-static void nodes_to_json(Json::Value& json)
-{
-    json["vertices"] = Json::Value(Json::arrayValue);
-    json["indices"]  = Json::Value(Json::arrayValue);
-    
-    printf("Model[0] origin: %g %g %g\n",
-           models[0].origin.x,
-           models[0].origin.y,
-           models[0].origin.z);
-    
-    int bsp_root = models[0].node_id0;\
-    
-    int index_base = 0;
-    
-    node_to_json(bsp_root, &index_base, json);
-}
-
-
-static Json::Value vertex_to_json(vertex_t& v)
-{
-    Json::Value result;
-    result["x"] = v.x;
-    result["y"] = v.y;
-    result["z"] = v.z;
-    return result;
-}
-
-static Json::Value edge_to_json(edge_t& e)
-{
-    Json::Value result;
-    result["vertex0"] = e.vertex0;
-    result["vertex1"] = e.vertex1;
-    return result;
-}
-
->>>>>>> 25083b3ed21f9b0c0f0168ddab413e0fbad057e2
 static void to_json(const char* file)
 {
     Json::Value json;
@@ -380,7 +393,6 @@ static void to_json(const char* file)
     dheader_t* header = (dheader_t*)data;
     
     json["version"] = header->version;
-<<<<<<< HEAD
     
     Array<vertex_t> vertices(data, header->vertices);
     json["vertices"] = vertices.to_json();
@@ -409,143 +421,21 @@ static void to_json(const char* file)
     Array<texinfo_t> texinfos(data, header->texinfo);
     json["texinfo"] = texinfos.to_json();
     
-    Array<uint8_t> lightmaps(data, header->lightmaps);
-    json["lightmaps"] = lightmaps.to_json();
+    //Array<uint8_t> lightmaps(data, header->lightmaps);
+    //json["lightmaps"] = lightmaps.to_json();
     
     Array<char> entities(data, header->entities);
-    json["entities"] = entities.to_json();
-=======
-
-    int num_vertices = header->vertices.size / sizeof(vertex_t);
-    vertex_t* vertices = (vertex_t*)(data + header->vertices.offset);
-    Json::Value jsonVertices = Json::Value(Json::arrayValue);
-    for (int i=0; i<num_vertices; i++)
-    {
-        jsonVertices.append(vertex_to_json(vertices[i]));
-    }
-    json["vertices"] = jsonVertices;
-    
-    
-    int num_edges = header->edges.size / sizeof(edge_t);
-    edge_t* edges = (edge_t*)(data + header->edges.offset);
-    Json::Value jEdges(Json::arrayValue);
-    for (int i=0; i<num_edges; i++)
-    {
-        jEdges.append(edge_to_json(edges[i]));
-    }
-    json["edges"] = jEdges;
-    
-    num_list_edges = header->ledges.size / sizeof(uint16_t);
-    list_edges = (int32_t*)(data + header->ledges.offset);
-    
-    num_planes = header->planes.size / sizeof(plane_t);
-    planes = (plane_t*)(data + header->planes.offset);
-    
-    _num_faces = header->faces.size / sizeof(face_t);
-    _faces = (face_t*)(data + header->faces.offset);
-    
-    num_nodes = header->nodes.size / sizeof(node_t);
-    nodes = (node_t*)(data + header->nodes.offset);
-    
-    num_models = header->models.size / sizeof(model_t);
-    models = (model_t*)(data + header->models.offset);
-    
-    // Bug here? wrong size of miptex struct?
-    num_miptextures = header->miptex.size / sizeof(miptex_t);
-    miptextures = (miptex_t*)(data + header->miptex.offset);
-    
-    for (int i=0; i<num_miptextures; i++)
-    {
-        char name_data[17] = {};
-        strncpy(name_data, miptextures[i].name, 16);
-        //printf("Texture: %s\n", name_data);
-    }
-    
-    _num_texinfos = header->texinfo.size / sizeof(texinfo_t);
-    _texinfos = (texinfo_t*)(data + header->texinfo.offset);
-    
-    num_lightmaps = header->lightmaps.size / sizeof(uint8_t);
-    lightmaps = (uint8_t*)(data + header->lightmaps.offset);
-    
-    num_entities = header->entities.size / sizeof(char);
-    entities = (char*)(data + header->entities.offset);
->>>>>>> 25083b3ed21f9b0c0f0168ddab413e0fbad057e2
-    
-    //nodes_to_json(json);
-    
-    //textures_to_json();
+    json["entities"] = entities.to_string();
     
     cout << json;
     
     free(data);
 }
 
-<<<<<<< HEAD
-#define FIELD_STR(s) FIELD_STR_(s)
-#define FIELD_STR_(s) #s
-#define ASSIGN_FIELD(field) result[FIELD_STR((field))] = object.field
-
-Json::Value object_to_json(const vertex_t& object)
-{
-    Json::Value result;
-    ASSIGN_FIELD(x);
-    ASSIGN_FIELD(y);
-    ASSIGN_FIELD(z);
-    return result;
-}
-
-Json::Value object_to_json(const edge_t object)
-{
-    Json::Value result;
-    ASSIGN_FIELD(vertex0);
-    ASSIGN_FIELD(vertex1);
-    return result;
-}
-
-    int16_t plane_id;  // The plane in which the face lies
-    //           must be in [0,numplanes[
-    int16_t side;      // 0 if in front of the plane, 1 if behind the plane
-    int ledge_id;       // first edge in the List of edges
-    //           must be in [0,numledges[
-    int16_t ledge_num; // number of edges in the List of edges
-    int16_t texinfo_id;// index of the Texture info the face is part of
-    //           must be in [0,numtexinfos[
-    uint8_t typelight;  // type of lighting, for the face
-    uint8_t baselight;  // from 0xFF (dark) to 0 (bright)
-    uint8_t light[2];   // two additional light models
-    int lightmap;       // Pointer inside the general light map, or -1
-
-Json::Value object_to_json(const face_t object)
-{
-    Json::Value result;
-    ASSIGN_FIELD(plane_id);
-    ASSIGN_FIELD(side);
-    ASSIGN_FIELD(ledge_id);
-    ASSIGN_FIELD(ledge_num);
-    ASSIGN_FIELD(texinfo_id);
-    ASSIGN_FIELD(typelight);
-    ASSIGN_FIELD(baselight);
-    
-    Json::Value lights(Json::arrayValue);
-    lights.append(object.light[0]);
-    lights.append(object.light[1]);
-    result["lights"] = lights;
-
-    ASSIGN_FIELD(lightmap);
-
-    return result;
-}
-
-=======
->>>>>>> 25083b3ed21f9b0c0f0168ddab413e0fbad057e2
 int main(int argc, char** argv)
 {
     if (argc < 2) fatal("Usage: %s <filename.bsp>\n", argv[0]);
     for (int i=1; i<argc; i++) to_json(argv[i]);
     return EXIT_SUCCESS;
 }
-<<<<<<< HEAD
 
-
-=======
->>>>>>> 25083b3ed21f9b0c0f0168ddab413e0fbad057e2
