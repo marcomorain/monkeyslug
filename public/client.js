@@ -64,9 +64,11 @@ $(function() {
       gl.shaderSource(shader, script);
       gl.compileShader(shader);
 
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-          console.log(gl.getShaderInfoLog(shader));
-          return null;
+      var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+      
+      if (!success) {
+        console.log(gl.getShaderInfoLog(shader));
+        return null;
       }
 
       return shader;
@@ -138,7 +140,42 @@ $(function() {
   var to_angle = function(data) {
     return parseFloat(data) * Math.PI / 180.0;
   };
+
+  $.getJSON('start.bsp.processed.json').success(function(data){
+    console.log(data);
+
+    var level = data.models[0];
+    console.log(level);
+
+    var model = {};
+    var i,j;
+
+    window.data = data;
+
+    var indices = [];
+
+    for (i=level.face_id; i<level.face_num; i++){
+      var face = data.faces[i];
+
+      for (j=face.ledge_id; j<face.ledge_num; j++){
+        var ledge = data.ledges[j];
+        var edge;
+        if (ledge > 0){
+          edge = data.edges[ledge];
+        } else {
+          edge = data.edges[-ledge];
+        }
+        indices.push(edge[0]);
+        indices.push(edge[1]);
+      }
+    }
+    console.log(indices);
+
+    triangle = new Buffer(gl, _.flatten(data.vertices), indices);
+
+  });
   
+  /*
   $.when( $.getJSON(map + '.bsp.vertices.json'),
           $.getJSON(map + '.bsp.indices.json'),
           $.getJSON(map + '.bsp.entities.json')
@@ -176,6 +213,7 @@ $(function() {
   }).fail(function(){
     console.log("JSON download error");
   });
+*/
   
   function setMatrixUniforms(gl) {
       gl.uniformMatrix4fv(shaderProgram.pMatrixUniform,  false, pMatrix);

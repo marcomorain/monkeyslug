@@ -2,7 +2,8 @@
 	"folders":
 	[
 		{
-			"path": "/Users/marcomorain/dev/monkeyslug"
+			"path": "/Users/marcomorain/dev/monkeyslug",
+      "file_exclude_patterns": ["*.css"]
 		}
 	]
 }

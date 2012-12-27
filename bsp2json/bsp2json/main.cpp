@@ -300,22 +300,31 @@ Json::Value object_to_json(const face_t& object)
 Json::Value object_to_json(const node_t& object)
 {
     Json::Value result;
-    ASSIGN_FIELD(back);
+    
+    const uint16_t leaf_bit = 0x8000;
+    
+    if (object.back & leaf_bit) {
+        uint16_t v = ~object.back;
+        int x = v;
+        result["back_leaf"] = x;
+    } else {
+        result["back_node"] = object.back;
+    }
+    
+    if (object.front & leaf_bit) {
+        uint16_t v = ~object.front;
+        int x = v;
+        result["front_leaf"] = x;
+    } else {
+        result["front_node"] =  object.front;
+    }
+    
     result["box"] = object_to_json(object.box);
     ASSIGN_FIELD(face_id);
     ASSIGN_FIELD(face_num);
-    ASSIGN_FIELD(front);
     ASSIGN_FIELD(plane_id);
     return result;
 }
-
- char   name[16];             // Name of the texture.
-    uint32_t width;                // width of picture, must be a multiple of 8
-    uint32_t height;               // height of picture, must be a multiple of 8
-    uint32_t offset1;              // offset to u_char Pix[width   * height]
-    uint32_t offset2;              // offset to u_char Pix[width/2 * height/2]
-    uint32_t offset4;              // offset to u_char Pix[width/4 * height/4]
-    uint32_t offset8;              // offset to u_char Pix[width/8 * height/8]
 
 Json::Value object_to_json(const miptex_t& object)
 {

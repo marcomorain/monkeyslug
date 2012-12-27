@@ -4,6 +4,14 @@
 		"selected_items":
 		[
 			[
+				"pr",
+				"process_entities"
+			],
+			[
+				"get",
+				"getJSON"
+			],
+			[
 				"na",
 				"name_data"
 			],
@@ -40,6 +48,12 @@
 	},
 	"file_history":
 	[
+		"/Users/marcomorain/dev/monkeyslug/public/client.js",
+		"/Users/marcomorain/dev/monkeyslug/monkeyslug.sublime-project",
+		"/Users/marcomorain/dev/monkeyslug/public/index.html",
+		"/Users/marcomorain/dev/monkeyslug/entities2json.py",
+		"/Users/marcomorain/dev/monkeyslug/public/screen.js",
+		"/Users/marcomorain/dev/monkeyslug/bsp2json.c",
 		"/Users/marcomorain/dev/Quake/QW/client/bspfile.h",
 		"/Users/marcomorain/dev/Quake/QW/client/model.c",
 		"/Users/marcomorain/dev/Quake/QW/client/gl_model.c"
@@ -61,6 +75,8 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"new Buffer",
+			"when",
 			"Mod_LoadTe",
 			"	Mod_LoadTextures (&header->lumps[LUMP_TEXTURES]);\n",
 			"LUMP_TEXTURES",
@@ -131,6 +147,14 @@
 		"height": 0.0,
 		"selected_items":
 		[
+			[
+				"scren",
+				"public/screen.js"
+			],
+			[
+				"index",
+				"public/index.html"
+			]
 		],
 		"width": 0.0
 	},
