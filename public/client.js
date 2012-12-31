@@ -4,16 +4,18 @@ $(function() {
   var url = $.url();
   var map = url.param('map') || 'start';
 
-  var mvMatrix      = mat4.create();
-  var pMatrix       = mat4.create();
-  var normalMatrix  = mat4.create();
+  var uniforms = {
+    model_view_matrix: mat4.create(),
+    projection_matrix: mat4.create()
+    // normal
+  };
   
   var mouse_x = 0;
   var mouse_y = 0;
   
   var ambient_light = vec3.create([0.1, 0.1, 0.1]);
 
-  var player = vec3.create([0, 0, 0]);
+  var player = vec3.create([0, -30, 0]);
   var yaw = 0;
   var roll = 0;
   var pitch = 0;
@@ -75,6 +77,8 @@ $(function() {
   }
   
   function initShaders(gl) {
+
+
       var fragmentShader = getShader(gl, '#shader-fs');
       var vertexShader   = getShader(gl, '#shader-vs');
 
@@ -89,35 +93,40 @@ $(function() {
 
       gl.useProgram(program);
 
-      program.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
-      gl.enableVertexAttribArray(program.vertexPositionAttribute);
+      var renderer = {
+        program    : program,
+        attributes : {},
+        uniforms   : {}
+      };
 
-      program.vertexColorAttribute = gl.getAttribLocation(program, 'aVertexColor');
-      gl.enableVertexAttribArray(program.vertexColorAttribute);
-            
-      program.vertexNormalAttribute = gl.getAttribLocation(program, 'aVertexNormal');
-      gl.enableVertexAttribArray(program.vertexNormalAttribute);
-      
-      program.vertexColorAttribute = gl.getAttribLocation(program, 'aVertexColor');
-      gl.enableVertexAttribArray(program.vertexColorAttribute);
 
-      program.pMatrixUniform        = gl.getUniformLocation(program, 'uPMatrix');
-      program.mvMatrixUniform       = gl.getUniformLocation(program, 'uMVMatrix');
-      program.normalMatrix          = gl.getUniformLocation(program, 'uNormalMatrix');
-      program.ambientColor          = gl.getUniformLocation(program, 'uAmbientColor');
-      program.pointLightingLocation = gl.getUniformLocation(program, 'uPointLightingLocation');
-      program.pointLightingColor    = gl.getUniformLocation(program, 'uPointLightingColor');
+      var set_vertex_attribute = function(renderer, name){
+        var attribute = gl.getAttribLocation(renderer.program, name);
+        gl.enableVertexAttribArray(attribute);
+        renderer.attributes[name] = attribute;
+      };
 
-      return program;
+      var set_uniform_attribute = function(renderer, name){
+        renderer.uniforms[name] = gl.getUniformLocation(renderer.program, name);
+      };
+
+      set_vertex_attribute(renderer, 'position');
+      //set_vertex_attribute(renderer, 'color');
+      //set_vertex_attribute(renderer, 'normal');
+
+      set_uniform_attribute(renderer, 'projection_matrix');
+      set_uniform_attribute(renderer, 'model_view_matrix');
+
+      return renderer;
   }
   
   var init_webgl = function(canvas) {
     var gl = canvas.getContext("experimental-webgl");
     if (!gl) console.log('Could not initialise WebGL');    
     gl.clearColor(0.7, 0.7, 0.9, 1);
-    gl.enable(gl.DEPTH_TEST);
-    gl.cullFace(gl.FRONT);
-    gl.enable(gl.CULL_FACE)
+    //gl.enable(gl.DEPTH_TEST);
+    //gl.cullFace(gl.FRONT);
+    //gl.enable(gl.CULL_FACE)
     
     return gl;
   };
@@ -127,14 +136,14 @@ $(function() {
   var $game = $(game);
   var gl = init_webgl(game);
   
-  var shaderProgram = initShaders(gl);
+  var renderer = initShaders(gl);
   
   var triangle = null;
   
   var lights = [];
   
   var to_vertex = function(data) {
-    return  vec3.create(_.map(data.split(' '), parseFloat));
+    return vec3.create(_.map(data.split(' '), parseFloat));
   };
   
   var to_angle = function(data) {
@@ -171,7 +180,38 @@ $(function() {
     }
     console.log(indices);
 
-    triangle = new Buffer(gl, _.flatten(data.vertices), indices);
+    //triangle = new Buffer(gl, _.flatten(data.vertices), indices);
+
+     var vertices = [
+        // Front face
+         0.0,  10.0,  0.0,
+        -10.0, -10.0,  10.0,
+         10.0, -10.0,  10.0,
+        // Right face
+         0.0,  10.0,  0.0,
+         10.0, -10.0,  10.0,
+         10.0, -10.0, -10.0,
+        // Back face
+         0.0,  10.0,  0.0,
+         10.0, -10.0, -10.0,
+        -10.0, -10.0, -10.0,
+        // Left face
+         0.0,  10.0,  0.0,
+        -10.0, -10.0, -10.0,
+        -10.0, -10.0,  10.0
+    ];
+
+
+    var indices = [
+    0,1,2,
+    3,4,5,
+    6,7,8,
+    9,10,11
+    ];
+
+
+    triangle = new Buffer(gl, vertices, indices);
+
 
   });
   
@@ -215,50 +255,26 @@ $(function() {
   });
 */
   
-  function setMatrixUniforms(gl) {
-      gl.uniformMatrix4fv(shaderProgram.pMatrixUniform,  false, pMatrix);
-      gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
-      gl.uniformMatrix4fv(shaderProgram.normalMatrix,    false, normalMatrix);
-      gl.uniform3fv(shaderProgram.ambientColor,           ambient_light);
-
-      
-      var closest_light_pos;
-      var closest_light_color;
-      
-      if (lights.length > 0){ 
-        var d = lights[0].light/500.0;
-        closest_light_pos   = lights[0].origin;
-        closest_light_color = vec3.create([d,d,d]);
-      } else {
-        closest_light_pos   = vec3.create([0,0,0]);
-        closest_light_color = vec3.create([0.3,0.3,0.3]);
-      }
-      
-      closest_light_pos = player;
-      gl.uniform3fv(shaderProgram.pointLightingLocation, closest_light_pos);
-      gl.uniform3fv(shaderProgram.pointLightingColor,    closest_light_color);
-      
+  function setMatrixUniforms(renderer, gl) {
+    _.each(_.keys(uniforms), function(uniform) { 
+      gl.uniformMatrix4fv(renderer.uniforms[uniform],  false, uniforms[uniform]);
+    });
   }
-  
-  
-  
+
   var clamp = function(n, min, max) {
     return Math.max(min, Math.min(n, max));
   }
   
-  var render = function(canvas, gl) {
+  var render = function(canvas, gl, renderer) {
 
     var w = canvas.width;
     var h = canvas.height;
-    
-    // Clear
-    canvas.width = w;
-    
+  
     gl.viewport(0, 0, w, h);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    mat4.perspective(fov, w / h, near_clip, far_clip, pMatrix);
-    mat4.identity(mvMatrix);
+    mat4.perspective(fov, w / h, near_clip, far_clip, uniforms.projection_matrix);
+    mat4.identity(uniforms.model_view_matrix);
 
     yaw   += mouse_sensitivity * mouse_x;
     pitch -= mouse_sensitivity * mouse_y;
@@ -266,14 +282,14 @@ $(function() {
     pitch = clamp(pitch, pitch_min, pitch_max);
  
     // Quake
-    var nintey = Math.PI / 2;
-    mat4.rotate(mvMatrix, -nintey, [1, 0, 0]);	    // put Z going up
-    mat4.rotate(mvMatrix,  nintey, [0, 0, 1]);	    // put Z going up
+    //var nintey = Math.PI / 2;
+   // mat4.rotate(uniforms.model_view_matrix, -nintey, [1, 0, 0]);	    // put Z going up
+    //mat4.rotate(uniforms.model_view_matrix,  nintey, [0, 0, 1]);	    // put Z going up
 
     // change to call rotateX,Y,Z
-    mat4.rotate(mvMatrix, roll,    [1, 0, 0]);
-    mat4.rotate(mvMatrix, pitch,   [0, 1, 0]);
-    mat4.rotate(mvMatrix, yaw,     [0, 0, 1]);
+    mat4.rotate(uniforms.model_view_matrix, roll,    [1, 0, 0]);
+    mat4.rotate(uniforms.model_view_matrix, pitch,   [0, 1, 0]);
+    mat4.rotate(uniforms.model_view_matrix, yaw,     [0, 0, 1]);
     
     var vec_walk   = vec3.scale(vec3.create([-Math.cos(yaw),  Math.sin(yaw), 0]), speed);
     var vec_strafe = vec3.scale(vec3.create([-Math.sin(yaw),  -Math.cos(yaw), 0]), speed);
@@ -317,20 +333,21 @@ $(function() {
     }
 
 
-    mat4.translate(mvMatrix, player);
-    mat4.inverse(mvMatrix, normalMatrix);
-    mat4.transpose(normalMatrix);
+    mat4.translate(uniforms.model_view_matrix, player);
+    //mat4.inverse(uniforms.model_view_matrix, normalMatrix);
+    //mat4.transpose(normalMatrix);
     
-    setMatrixUniforms(gl);
+    setMatrixUniforms(renderer, gl);
 
     if (triangle) {
 
-      var stride = (3 * 4 * 4);
+      //var stride = (3 * 4 * 4);
+      var stride = 0;
       
       gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
-      gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 3, gl.FLOAT, false, stride, 0);
-      gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute,   3, gl.FLOAT, false, stride, 12);
-      gl.vertexAttribPointer(shaderProgram.vertexColorAttribute,    3, gl.FLOAT, false, stride, 24);
+      gl.vertexAttribPointer(renderer.attributes['position'],  3, gl.FLOAT, false, stride, 0);
+      //gl.vertexAttribPointer(renderer.attributes['normal'],  3, gl.FLOAT, false, stride, 12);
+      //gl.vertexAttribPointer(renderer.attributes['color'],   3, gl.FLOAT, false, stride, 24);
       
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangle.index_buffer);
 
@@ -346,7 +363,7 @@ $(function() {
       return vec3.dist(this, light.origin);
     }, player);
     
-    render(game, gl);
+    render(game, gl, renderer);
     mouse_x = 0;
     mouse_y = 0;
   };

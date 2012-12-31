@@ -11,48 +11,28 @@
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery-url-parser/2.2.1/purl.min.js"></script>
     <script type="text/javascript" src="gl-matrix-min.js"></script>
     
-    <script id="shader-vs" type="x-shader/x-vertex">
-        attribute vec3 aVertexPosition;
-        attribute vec3 aVertexNormal;
-        attribute vec3 aVertexColor;
+    <script id="shader-fs" type="x-shader/x-fragment">
+      precision mediump float;
+      //varying vec4 vertex_color;
 
-        uniform mat4 uMVMatrix;
-        uniform mat4 uPMatrix;
-        uniform mat4 uNormalMatrix;
-        uniform vec3 uAmbientColor;
-
-        varying vec3 vLighting;
-        varying vec3 vColor;
-        varying vec4 vTransformedNormal;
-        varying vec4 vPosition;
-
-        void main(void) {
-            vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
-            gl_Position = uPMatrix * vPosition;
-            vTransformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
-            vColor             = aVertexColor;
-
-        }
+      void main(void) {
+        //gl_FragColor = vertex_color;
+      }
     </script>
     
-    <script id="shader-fs" type="x-shader/x-fragment">
-        precision mediump float;
-        varying vec3 vLighting;
-        varying vec3 vColor;
-        varying vec4 vTransformedNormal;
-        varying vec4 vPosition;
-        uniform vec3 uPointLightingLocation;
-        uniform vec3 uPointLightingColor;
-        uniform vec3 uAmbientColor;
+    <script id="shader-vs" type="x-shader/x-vertex">
+      attribute vec3 position;
+      //attribute vec4 color;
 
-        void main(void) {
-          
-            vec4 lightDirection = vec4(normalize(uPointLightingLocation - vPosition.xyz), 1);
-            float directionalLightWeighting = max(dot(normalize(vTransformedNormal), lightDirection), 0.0);
-            vec3 lightWeighting = uAmbientColor + uPointLightingColor * directionalLightWeighting;
-            
-            gl_FragColor = vec4(lightWeighting, 1);
-        }
+      uniform mat4 model_view_matrix;
+      uniform mat4 projection_matrix;
+
+      //varying vec4 vertex_color;
+
+      void main(void) {
+        gl_Position = projection_matrix * model_view_matrix * vec4(position, 1);
+        //vertex_color = color;
+      }
     </script>
     
     <script src="screen.js"></script>

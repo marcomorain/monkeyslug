@@ -3,7 +3,7 @@
 	[
 		{
 			"path": "/Users/marcomorain/dev/monkeyslug",
-      "file_exclude_patterns": ["*.css"]
+      "file_exclude_patterns": ["*.css", "monkeyslug/public/.sass-cache"]
 		}
 	]
 }

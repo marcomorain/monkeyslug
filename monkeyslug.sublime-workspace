@@ -4,8 +4,36 @@
 		"selected_items":
 		[
 			[
+				"uni",
+				"uniforms"
+			],
+			[
+				"pro",
+				"projection_matrix"
+			],
+			[
+				"re",
+				"render"
+			],
+			[
+				"model",
+				"model_view_matrix"
+			],
+			[
+				"att",
+				"attributes"
+			],
+			[
+				"ve",
+				"vertex_attribute"
+			],
+			[
+				"ver",
+				"vertex_color"
+			],
+			[
 				"pr",
-				"process_entities"
+				"projection_matrix"
 			],
 			[
 				"get",
@@ -48,12 +76,14 @@
 	},
 	"file_history":
 	[
+		"/Users/marcomorain/Dropbox/wedding_booklet.tex",
 		"/Users/marcomorain/dev/monkeyslug/public/client.js",
-		"/Users/marcomorain/dev/monkeyslug/monkeyslug.sublime-project",
 		"/Users/marcomorain/dev/monkeyslug/public/index.html",
+		"/Users/marcomorain/Library/Application Support/Sublime Text 2/Packages/Default/Preferences.sublime-settings",
+		"/Users/marcomorain/dev/monkeyslug/monkeyslug.sublime-project",
+		"/Users/marcomorain/dev/monkeyslug/bsp2json.c",
 		"/Users/marcomorain/dev/monkeyslug/entities2json.py",
 		"/Users/marcomorain/dev/monkeyslug/public/screen.js",
-		"/Users/marcomorain/dev/monkeyslug/bsp2json.c",
 		"/Users/marcomorain/dev/Quake/QW/client/bspfile.h",
 		"/Users/marcomorain/dev/Quake/QW/client/model.c",
 		"/Users/marcomorain/dev/Quake/QW/client/gl_model.c"
@@ -75,6 +105,29 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"N. and N.",
+			"position",
+			"init",
+			"clip",
+			", 1.0",
+			", 1.",
+			"color",
+			"setMatrixUniforms",
+			"var render",
+			"render",
+			"setMatrixUniforms",
+			"initS",
+			"setMatrixUniforms",
+			"mMatrix",
+			"mvMatr",
+			"pMatrix",
+			"triangle",
+			"attributes",
+			"pMatrix",
+			"initShaders",
+			"pMatrixUniform",
+			"shaderProgram",
+			"4",
 			"new Buffer",
 			"when",
 			"Mod_LoadTe",
@@ -91,6 +144,7 @@
 		"regex": false,
 		"replace_history":
 		[
+			"Marc and Áine"
 		],
 		"reverse": false,
 		"show_context": true,
@@ -139,7 +193,7 @@
 	"menu_visible": true,
 	"replace":
 	{
-		"height": 0.0
+		"height": 64.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -147,6 +201,10 @@
 		"height": 0.0,
 		"selected_items":
 		[
+			[
+				"clien",
+				"public/client.js"
+			],
 			[
 				"scren",
 				"public/screen.js"
