@@ -15,7 +15,7 @@ $(function() {
   
   var ambient_light = vec3.create([0.1, 0.1, 0.1]);
 
-  var player = vec3.create([0, -30, 0]);
+  var player = vec3.create([17, 14, 63]);
   var yaw = 0;
   var roll = 0;
   var pitch = 0;
@@ -24,7 +24,7 @@ $(function() {
   var fov = 45;
   var near_clip = 4;
   var far_clip = 4096;
-  var speed = 4;
+  var speed = 1;
   
   var pitch_min = -Math.PI/6;
   var pitch_max =  Math.PI/6;
@@ -116,6 +116,7 @@ $(function() {
 
       set_uniform_attribute(renderer, 'projection_matrix');
       set_uniform_attribute(renderer, 'model_view_matrix');
+      set_uniform_attribute(renderer, 'color');
 
       return renderer;
   }
@@ -124,9 +125,13 @@ $(function() {
     var gl = canvas.getContext("experimental-webgl");
     if (!gl) console.log('Could not initialise WebGL');    
     gl.clearColor(0.7, 0.7, 0.9, 1);
-    //gl.enable(gl.DEPTH_TEST);
-    //gl.cullFace(gl.FRONT);
-    //gl.enable(gl.CULL_FACE)
+    gl.enable(gl.DEPTH_TEST);
+    gl.cullFace(gl.FRONT);
+    gl.enable(gl.CULL_FACE);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.enable(gl.BLEND);
+          gl.disable(gl.DEPTH_TEST);
+
     
     return gl;
   };
@@ -256,9 +261,9 @@ $(function() {
 */
   
   function setMatrixUniforms(renderer, gl) {
-    _.each(_.keys(uniforms), function(uniform) { 
-      gl.uniformMatrix4fv(renderer.uniforms[uniform],  false, uniforms[uniform]);
-    });
+    gl.uniformMatrix4fv(renderer.uniforms.model_view_matrix, false, uniforms.model_view_matrix);
+    gl.uniformMatrix4fv(renderer.uniforms.projection_matrix, false, uniforms.projection_matrix);
+    gl.uniform4fv(renderer.uniforms.color, [0,0,0,0]);
   }
 
   var clamp = function(n, min, max) {
@@ -287,9 +292,9 @@ $(function() {
     //mat4.rotate(uniforms.model_view_matrix,  nintey, [0, 0, 1]);	    // put Z going up
 
     // change to call rotateX,Y,Z
-    mat4.rotate(uniforms.model_view_matrix, roll,    [1, 0, 0]);
-    mat4.rotate(uniforms.model_view_matrix, pitch,   [0, 1, 0]);
-    mat4.rotate(uniforms.model_view_matrix, yaw,     [0, 0, 1]);
+    mat4.rotate(uniforms.model_view_matrix, roll,    [0, 0, 1]);
+    mat4.rotate(uniforms.model_view_matrix, pitch,   [1, 0, 0]);
+    mat4.rotate(uniforms.model_view_matrix, yaw,     [0, 1, 0]);
     
     var vec_walk   = vec3.scale(vec3.create([-Math.cos(yaw),  Math.sin(yaw), 0]), speed);
     var vec_strafe = vec3.scale(vec3.create([-Math.sin(yaw),  -Math.cos(yaw), 0]), speed);
@@ -347,7 +352,7 @@ $(function() {
       gl.bindBuffer(gl.ARRAY_BUFFER, triangle.vertex_buffer);
       gl.vertexAttribPointer(renderer.attributes['position'],  3, gl.FLOAT, false, stride, 0);
       //gl.vertexAttribPointer(renderer.attributes['normal'],  3, gl.FLOAT, false, stride, 12);
-      //gl.vertexAttribPointer(renderer.attributes['color'],   3, gl.FLOAT, false, stride, 24);
+      //gl.vertexAttribPointer(renderer.attributes['color'],     3, gl.FLOAT, false, stride, 24);
       
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, triangle.index_buffer);
 
@@ -355,6 +360,8 @@ $(function() {
       
     }
   }
+
+  var console_div = $('.console');
 
   var update = function(dt) {
     window.webkitRequestAnimationFrame(update, game);
@@ -366,6 +373,9 @@ $(function() {
     render(game, gl, renderer);
     mouse_x = 0;
     mouse_y = 0;
+
+    console_div.text('Player: ' + player[0] + ', ' + player[1] + ', ' + player[2]);
+
   };
   
   var original_width  = game.width;

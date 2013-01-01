@@ -51,6 +51,30 @@
 	},
 	"buffers":
 	[
+		{
+			"file": "public/index.html",
+			"settings":
+			{
+				"buffer_size": 1456,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "public/style.scss",
+			"settings":
+			{
+				"buffer_size": 489,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "public/client.js",
+			"settings":
+			{
+				"buffer_size": 11063,
+				"line_ending": "Unix"
+			}
+		}
 	],
 	"build_system": "",
 	"command_palette":
@@ -76,13 +100,13 @@
 	},
 	"file_history":
 	[
+		"/Users/marcomorain/dev/monkeyslug/entities2json.py",
 		"/Users/marcomorain/Dropbox/wedding_booklet.tex",
 		"/Users/marcomorain/dev/monkeyslug/public/client.js",
 		"/Users/marcomorain/dev/monkeyslug/public/index.html",
 		"/Users/marcomorain/Library/Application Support/Sublime Text 2/Packages/Default/Preferences.sublime-settings",
 		"/Users/marcomorain/dev/monkeyslug/monkeyslug.sublime-project",
 		"/Users/marcomorain/dev/monkeyslug/bsp2json.c",
-		"/Users/marcomorain/dev/monkeyslug/entities2json.py",
 		"/Users/marcomorain/dev/monkeyslug/public/screen.js",
 		"/Users/marcomorain/dev/Quake/QW/client/bspfile.h",
 		"/Users/marcomorain/dev/Quake/QW/client/model.c",
@@ -105,6 +129,16 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"uniform",
+			"model_view_matrix",
+			"'color",
+			"color",
+			"position",
+			"color",
+			"player = ",
+			"N. and N.",
+			"player = ",
+			"player",
 			"N. and N.",
 			"position",
 			"init",
@@ -155,8 +189,93 @@
 	"groups":
 	[
 		{
+			"selected": 2,
 			"sheets":
 			[
+				{
+					"buffer": 0,
+					"file": "public/index.html",
+					"settings":
+					{
+						"buffer_size": 1456,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1058,
+								1058
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/HTML/HTML.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 105.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "public/style.scss",
+					"settings":
+					{
+						"buffer_size": 489,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								485,
+								485
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Text/Plain text.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 23.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "public/client.js",
+					"settings":
+					{
+						"buffer_size": 11063,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3500,
+								3500
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/JavaScript/JavaScript.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1641.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
 			]
 		}
 	],
@@ -202,16 +321,24 @@
 		"selected_items":
 		[
 			[
+				"clin",
+				"public/client.js"
+			],
+			[
+				"css",
+				"public/style.scss"
+			],
+			[
+				"index",
+				"public/index.html"
+			],
+			[
 				"clien",
 				"public/client.js"
 			],
 			[
 				"scren",
 				"public/screen.js"
-			],
-			[
-				"index",
-				"public/index.html"
 			]
 		],
 		"width": 0.0
