@@ -13,18 +13,18 @@ $(function() {
   var mouse_x = 0;
   var mouse_y = 0;
   
-  var ambient_light = vec3.create([0.1, 0.1, 0.1]);
+  var ambient_light = vec3.clone([0.1, 0.1, 0.1]);
 
-  var player = vec3.create([17, 14, 63]);
+  var player = vec3.clone([1.3, 0.35, -3.9]);
   var yaw = 0;
   var roll = 0;
   var pitch = 0;
     
   var mouse_sensitivity = 0.01;
   var fov = 45;
-  var near_clip = 4;
+  var near_clip = 0.01;
   var far_clip = 4096;
-  var speed = 1;
+  var speed = 0.1;
   
   var pitch_min = -Math.PI/6;
   var pitch_max =  Math.PI/6;
@@ -126,11 +126,11 @@ $(function() {
     if (!gl) console.log('Could not initialise WebGL');    
     gl.clearColor(0.7, 0.7, 0.9, 1);
     gl.enable(gl.DEPTH_TEST);
-    gl.cullFace(gl.FRONT);
+    gl.cullFace(gl.BACK);
     gl.enable(gl.CULL_FACE);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    gl.enable(gl.BLEND);
-          gl.disable(gl.DEPTH_TEST);
+    //gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    //gl.enable(gl.BLEND);
+    gl.disable(gl.DEPTH_TEST);
 
     
     return gl;
@@ -187,32 +187,54 @@ $(function() {
 
     //triangle = new Buffer(gl, _.flatten(data.vertices), indices);
 
-     var vertices = [
-        // Front face
-         0.0,  10.0,  0.0,
-        -10.0, -10.0,  10.0,
-         10.0, -10.0,  10.0,
-        // Right face
-         0.0,  10.0,  0.0,
-         10.0, -10.0,  10.0,
-         10.0, -10.0, -10.0,
-        // Back face
-         0.0,  10.0,  0.0,
-         10.0, -10.0, -10.0,
-        -10.0, -10.0, -10.0,
-        // Left face
-         0.0,  10.0,  0.0,
-        -10.0, -10.0, -10.0,
-        -10.0, -10.0,  10.0
+    var vertices = [
+      // Front face
+      -1.0, -1.0,  1.0,
+       1.0, -1.0,  1.0,
+       1.0,  1.0,  1.0,
+      -1.0,  1.0,  1.0,
+       
+      // Back face
+      -1.0, -1.0, -1.0,
+      -1.0,  1.0, -1.0,
+       1.0,  1.0, -1.0,
+       1.0, -1.0, -1.0,
+       
+      // Top face
+      -1.0,  1.0, -1.0,
+      -1.0,  1.0,  1.0,
+       1.0,  1.0,  1.0,
+       1.0,  1.0, -1.0,
+       
+      // Bottom face
+      -1.0, -1.0, -1.0,
+       1.0, -1.0, -1.0,
+       1.0, -1.0,  1.0,
+      -1.0, -1.0,  1.0,
+       
+      // Right face
+       1.0, -1.0, -1.0,
+       1.0,  1.0, -1.0,
+       1.0,  1.0,  1.0,
+       1.0, -1.0,  1.0,
+       
+      // Left face
+      -1.0, -1.0, -1.0,
+      -1.0, -1.0,  1.0,
+      -1.0,  1.0,  1.0,
+      -1.0,  1.0, -1.0
     ];
 
+    //vertices = _.map(vertices, function(x){ return 5 * x;});
 
-    var indices = [
-    0,1,2,
-    3,4,5,
-    6,7,8,
-    9,10,11
-    ];
+    var indices =  [
+  0,  1,  2,      0,  2,  3,    // front
+  4,  5,  6,      4,  6,  7,    // back
+  8,  9,  10,     8,  10, 11,   // top
+  12, 13, 14,     12, 14, 15,   // bottom
+  16, 17, 18,     16, 18, 19,   // right
+  20, 21, 22,     20, 22, 23    // left
+];
 
 
     triangle = new Buffer(gl, vertices, indices);
@@ -269,6 +291,9 @@ $(function() {
   var clamp = function(n, min, max) {
     return Math.max(min, Math.min(n, max));
   }
+
+
+  var x = 0;
   
   var render = function(canvas, gl, renderer) {
 
@@ -278,13 +303,20 @@ $(function() {
     gl.viewport(0, 0, w, h);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    mat4.perspective(fov, w / h, near_clip, far_clip, uniforms.projection_matrix);
+    mat4.perspective(uniforms.projection_matrix, fov, w / h, near_clip, far_clip);
     mat4.identity(uniforms.model_view_matrix);
+    
+
+    //x += 0.1;
+
 
     yaw   += mouse_sensitivity * mouse_x;
     pitch -= mouse_sensitivity * mouse_y;
     
     pitch = clamp(pitch, pitch_min, pitch_max);
+
+    mat4.rotate(uniforms.model_view_matrix, uniforms.model_view_matrix, pitch, [1, 0, 0]); // Rotate 90 degrees around the Y axis
+    mat4.rotate(uniforms.model_view_matrix, uniforms.model_view_matrix, yaw, [0, 1, 0]); // Rotate 90 degrees around the Y axis
  
     // Quake
     //var nintey = Math.PI / 2;
@@ -292,55 +324,47 @@ $(function() {
     //mat4.rotate(uniforms.model_view_matrix,  nintey, [0, 0, 1]);	    // put Z going up
 
     // change to call rotateX,Y,Z
-    mat4.rotate(uniforms.model_view_matrix, roll,    [0, 0, 1]);
-    mat4.rotate(uniforms.model_view_matrix, pitch,   [1, 0, 0]);
-    mat4.rotate(uniforms.model_view_matrix, yaw,     [0, 1, 0]);
+    //mat4.rotate(uniforms.model_view_matrix, uniforms.model_view_matrix, roll,    [0, 0, 1]);
+    //mat4.rotate(uniforms.model_view_matrix, uniforms.model_view_matrix, pitch,   [1, 0, 0]);
+    mat4.rotate(uniforms.model_view_matrix, uniforms.model_view_matrix, yaw,     [0, 1, 0]);
     
-    var vec_walk   = vec3.scale(vec3.create([-Math.cos(yaw),  Math.sin(yaw), 0]), speed);
-    var vec_strafe = vec3.scale(vec3.create([-Math.sin(yaw),  -Math.cos(yaw), 0]), speed);
+    var vec_walk   = vec3.clone([-Math.cos(yaw), 0,  Math.sin(yaw)]);
+    var vec_strafe = vec3.clone([-Math.sin(yaw), 0, -Math.cos(yaw)]);
+    vec3.scale(vec_walk,   vec_walk,   speed);
+    vec3.scale(vec_strafe, vec_strafe, speed);
 
     if (keys[up])
     {
-      player = vec3.add(player, vec_walk);
-      
-      /*
-      _.each(_.first(lights, 16), function(light){
-        console.log(vec3.dist(light.origin, player));
-        
-      });
-      */
-      
+      player = vec3.add(player, player, vec_walk);
     }
     
     if (keys[down])
     {
-      player = vec3.subtract(player, vec_walk);
+      player = vec3.subtract(player, player, vec_walk);
     }
     
     if (keys[left]) 
     {
-      player = vec3.add(player, vec_strafe);
+      player = vec3.add(player, player, vec_strafe);
     }
     
     if (keys[right]) 
     {
-      player = vec3.subtract(player, vec_strafe);
+      player = vec3.subtract(player, player, vec_strafe);
     }
     
     if (keys[jump])
     {
-      player = vec3.subtract(player, [0, 0, speed]);
+      player = vec3.subtract(player, player, [0, speed, 0]);
     }
     
     if (keys[duck])
     {
-      player = vec3.add(player, [0, 0, speed]);
+      player = vec3.add(player, player, [0, speed, 0]);
     }
 
 
-    mat4.translate(uniforms.model_view_matrix, player);
-    //mat4.inverse(uniforms.model_view_matrix, normalMatrix);
-    //mat4.transpose(normalMatrix);
+    mat4.translate(uniforms.model_view_matrix, uniforms.model_view_matrix, player);
     
     setMatrixUniforms(renderer, gl);
 
@@ -365,11 +389,6 @@ $(function() {
 
   var update = function(dt) {
     window.webkitRequestAnimationFrame(update, game);
-    
-    lights = _.sortBy(lights, function(light) {
-      return vec3.dist(this, light.origin);
-    }, player);
-    
     render(game, gl, renderer);
     mouse_x = 0;
     mouse_y = 0;
